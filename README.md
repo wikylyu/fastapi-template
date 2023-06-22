@@ -28,6 +28,13 @@ FastAPI框架的模板，可以与[angular-dashboard-template](https://github.co
 ```
 
 ## 数据库
-此项目使用PostgreSQL作为关系数据库。具体数据表定义在[doc/schema.sql]()。
+此项目使用PostgreSQL作为关系数据库。具体数据表定义在[doc/schema.sql](https://github.com/wikylyu/fastapi-template/blob/main/doc/schema.sql)。
 
-根据需要修改数据表的前缀，默认为**t_**，同时需要修改文件[db/psql.py]()中**TableBase**的**_table_prefix**属性
+根据需要修改数据表的前缀，默认为**t_**，同时需要修改文件[db/psql.py](https://github.com/wikylyu/fastapi-template/blob/7ef525cfaa14641a8ea35a58ea3eb5652b0a4091/db/psql.py#L19)中**TableBase**的**_table_prefix**属性。
+
+可以用以下方式创建数据库：
+```sql
+CREATE DATABASE template WITH ENCODING=UTF-8;
+\c tempalte;
+\i doc/schema.sql;
+```
