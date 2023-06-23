@@ -65,7 +65,7 @@ class User(TableBase):
 
     def check_password(self, plain: str) -> bool:
         '''检查密码是否正确'''
-        return encrypt_password(self.ptype, self.salt, plain) == self.password
+        return self.password and encrypt_password(self.ptype, self.salt, plain) == self.password
 
 
 class UserToken(TableBase):
@@ -113,7 +113,7 @@ class AdminStaff(TableBase):
                           onupdate=func.now(), server_default=func.now())
 
     def check_password(self, plain: str) -> bool:
-        return encrypt_password(self.ptype, self.salt, plain) == self.password
+        return self.password and encrypt_password(self.ptype, self.salt, plain) == self.password
 
 
 class AdminStaffTokenStatus(enum.Enum):

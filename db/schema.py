@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from pydantic import BaseModel
-from db.models import AdminStaffStatus, AdminStaffTokenStatus
+from db.models import AdminStaffStatus, AdminStaffTokenStatus,UserStatus
 import uuid
 
 
@@ -27,6 +27,21 @@ class AdminStaffToken(BaseModel):
     ip: str
     expired_time: datetime | None
     status: AdminStaffTokenStatus
+    created_time: datetime
+    updated_time: datetime
+
+    class Config:
+        orm_mode = True
+
+class User(BaseModel):
+    id:int
+    phone:str
+    nickname:str
+    avatar:str
+    gender:str
+    status:UserStatus
+    wxopenid:str
+    wxunionid:str
     created_time: datetime
     updated_time: datetime
 

@@ -1,4 +1,4 @@
-from fastapi import Depends, Cookie, HTTPException
+from fastapi import Depends, Cookie, HTTPException,Request
 from sqlalchemy.orm import Session
 from typing import Annotated
 from db import staff as staffdb
@@ -6,9 +6,12 @@ from db.models import AdminStaffTokenStatus, AdminStaff, AdminStaffStatus
 from db.psql import get_psql
 from datetime import datetime
 
+SessionStaffTokenKey = 'stafftoken'
 
-async def try_current_staff(stafftoken: Annotated[str, Cookie()] = '', db: Session = Depends(get_psql)):
+
+async def try_current_staff(request:Request, db: Session = Depends(get_psql)):
     '''获取当前登录用户，如果没有用户，则返回None'''
+    stafftoken=request.session.get(SessionStaffTokenKey)
     if not stafftoken:
         return None
     token = staffdb.get_admin_staff_token(db, stafftoken)

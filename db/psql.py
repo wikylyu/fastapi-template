@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base,declared_attr
 from sqlalchemy.orm import sessionmaker
 from config.consul import read_config_by_key
+from fastapi import HTTPException
 
 
 _db_config = read_config_by_key('db')
@@ -27,6 +28,8 @@ def get_psql():
     try:
         yield db
         db.commit()
+    except HTTPException as e:
+        pass # 忽略HTTP异常
     except Exception as e:
         import traceback
         traceback.print_exception(e)

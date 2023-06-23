@@ -10,7 +10,7 @@ from api.status import AdminpiStatus
 from api.response import success_response, failure_response
 from datetime import datetime, timedelta
 from typing import Annotated
-from adminpi.auth import get_current_staff, try_current_staff
+from adminpi.auth import get_current_staff, try_current_staff,SessionStaffTokenKey
 from fast_captcha import img_captcha
 import re
 
@@ -46,7 +46,6 @@ class LoginRequest(BaseModel):
 
 
 SessionLoginCaptchaKey = 'logincaptcha'
-CookieStaffTokenKey = 'stafftoken'
 
 
 @router.put('/login')
@@ -70,8 +69,7 @@ async def login(req: LoginRequest, request: Request, response: Response, user_ag
 
     token = staffdb.create_admin_staff_token(
         db, staff.id, x_forwarded_for, user_agent, expired_time=datetime.now()+timedelta(days=days))
-    response.set_cookie(key=CookieStaffTokenKey, value=token.id,
-                        max_age=3600*24*days)  # Cookie
+    request.session[SessionStaffTokenKey]=str(token.id)
 
     return success_response(staff, schema.AdminStaff)
 
@@ -84,9 +82,9 @@ async def get_captch(request: Request):
 
 
 @router.put('/logout')
-async def logout(response: Response, self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
+async def logout(request: Request, self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
     '''注销用户'''
-    response.delete_cookie(key=CookieStaffTokenKey)
+    request.session[SessionStaffTokenKey]=''
     staffdb.set_admin_staff_token_invalid(db, self.current_token.id)
     return success_response(None)
 

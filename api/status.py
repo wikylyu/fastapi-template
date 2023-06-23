@@ -14,4 +14,5 @@ class AdminpiStatus(Enum):
 class ApiStatus(Enum):
     OK = 0
 
-    IncorrectPassword = 1001
+    UserPasswordIncorrect = 1001
+    PhoneCodeIncorrect=1002

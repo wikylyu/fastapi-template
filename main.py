@@ -16,7 +16,7 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
-app.add_middleware(SessionMiddleware, secret_key=_http_config['session'])
+app.add_middleware(SessionMiddleware, secret_key=_http_config['session'],max_age=3600*24*30)
 
-app.include_router(userapi_router, prefix='/api')
-app.include_router(adminpi_router, prefix='/adminpi')
+app.include_router(userapi_router, prefix='/api') # 用户端接口
+app.include_router(adminpi_router, prefix='/adminpi') # 管理后台接口
