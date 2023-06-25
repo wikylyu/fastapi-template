@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import update
+from sqlalchemy import update, or_
 from db.models import User, UserToken, PasswordType, UserStatus, UserTokenStatus, random_password_type, random_salt, encrypt_password
 from datetime import datetime
 import random
@@ -25,7 +25,8 @@ def create_user(db: Session, phone: str, password: str, nickname: str = '', avat
             phone=phone,
             salt=salt,
             ptype=ptype,
-            password=encrypt_password(ptype, salt, password) if password else '',
+            password=encrypt_password(
+                ptype, salt, password) if password else '',
             nickname=nickname,
             avatar=avatar,
             status=UserStatus.OK,
@@ -63,3 +64,20 @@ def set_user_token_invalid(db: Session, id: str):
         db.execute(update(UserToken).where(UserToken.id ==
                    id).values(status=UserTokenStatus.Invalid))
         tx.commit()
+
+
+def find_users(db: Session, query: str = '', status: UserStatus | str = '', page: int = 1, page_size: int = 10):
+    '''查询用户列表'''
+    q = db.query(User)
+    if query:
+        qry = '%{}%'.format(query)
+        condition = User.nickname.ilike(qry) | User.phone.ilike(qry)
+        if query.isdigit():
+            condition = condition | User.id == int(query)
+        q = q.filter(condition)
+    if status:
+        q = q.filter(User.status == status)
+
+    total = q.count()
+    q = q.order_by(User.id.desc()).limit(page_size).offset((page-1)*page_size)
+    return q.all(), total
