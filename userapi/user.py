@@ -4,7 +4,7 @@ from api.status import ApiStatus
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from db.psql import get_psql
-from db.models import User
+from db.models import User, UserStatus
 from db import user as userdb
 from api import schema
 from typing import Annotated, Any
@@ -40,7 +40,7 @@ async def send_login_code(req: SendLoginCodeRequest):
 
     code = random_digit(6)
     if not sms.send_sms(req.phone, 'phonecode', [code, "5"]):
-        return failure_response(ApiStatus.PhoenCodeSentFailure, SendWait(wait=0))
+        return failure_response(ApiStatus.PhoneCodeSentFailure, SendWait(wait=0))
     redis.setex(key, code, ex=max_age)
     return success_response(SendWait(wait=freq_duration))
 
@@ -59,18 +59,48 @@ async def login_with_phone(req: LoginWithPhoneRequest, request: Request, user_ag
                            x_forwarded_for: Annotated[str | None, Header()] = None, db: Session = Depends(get_psql)):
     '''使用手机号登陆'''
 
-    # TODO 检查短信验证码
-    if req.code != '123456':
-        return failure_response(ApiStatus.UserPasswordIncorrect)
+    key = 'user.login.phone.{}'.format(req.phone)
+    v = redis.get(key)
+    if not v or v.decode() != req.code:
+        return failure_response(ApiStatus.PhoneCodeIncorrect)
+    redis.delete(key)
 
     user = userdb.get_user_by_phone(db, req.phone)
     if not user:  # 用户不存在，则创建
         user = userdb.create_user(db, req.phone, '', 'SEOUSER', '')
+    elif user.status != UserStatus.OK:
+        return failure_response(ApiStatus.UserBanned)
 
     days = 30
     expired_time = datetime.now()+timedelta(days=days)
     token = userdb.create_user_token(
         db, user.id, x_forwarded_for, user_agent, expired_time=expired_time, method='Phone')
+    request.session[SessionUserTokenKey] = str(token.id)
+
+    return success_response(user, schema.User)
+
+
+class LoginWithPasswordRequest(BaseModel):
+
+    phone: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+@router.put('/plogin', response_model=StatusResponse[schema.User])
+async def login_with_password(req: LoginWithPasswordRequest, request: Request, user_agent: Annotated[str | None, Header()],
+                              x_forwarded_for: Annotated[str | None, Header()] = None, db: Session = Depends(get_psql)):
+    '''使用密码登录'''
+    user = userdb.get_user_by_phone(db, req.phone)
+    if not user:
+        return failure_response(ApiStatus.UserPhoneNotFound)
+    if user.status != UserStatus.OK:
+        return failure_response(ApiStatus.UserBanned)
+    elif not user.check_password(req.password):
+        return failure_response(ApiStatus.UserPasswordIncorrect)
+    days = 30
+    expired_time = datetime.now()+timedelta(days=days)
+    token = userdb.create_user_token(
+        db, user.id, x_forwarded_for, user_agent, expired_time=expired_time, method='Password')
     request.session[SessionUserTokenKey] = str(token.id)
 
     return success_response(user, schema.User)

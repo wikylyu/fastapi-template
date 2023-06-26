@@ -14,7 +14,9 @@ class AdminpiStatus(Enum):
 class ApiStatus(Enum):
     OK = 0
 
+    UserBanned = 1000
     UserPasswordIncorrect = 1001
     PhoneCodeIncorrect = 1002
     PhoneCodeSentTooFast = 1003
-    PhoenCodeSentFailure = 1004
+    PhoneCodeSentFailure = 1004
+    UserPhoneNotFound = 1005

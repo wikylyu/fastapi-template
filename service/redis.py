@@ -18,3 +18,13 @@ def ttl(key: str) -> int:
     '''获取过期时间'''
     key = _prefix+key
     return _redis.ttl(key)
+
+
+def get(key: str) -> bytes | None:
+    key = _prefix+key
+    return _redis.get(key)
+
+
+def delete(key: str):
+    key = _prefix+key
+    return _redis.delete(key)
