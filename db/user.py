@@ -73,7 +73,7 @@ def find_users(db: Session, query: str = '', status: UserStatus | str = '', page
         qry = '%{}%'.format(query)
         condition = User.nickname.ilike(qry) | User.phone.ilike(qry)
         if query.isdigit():
-            condition = condition | User.id == int(query)
+            condition = condition | (User.id == int(query))
         q = q.filter(condition)
     if status:
         q = q.filter(User.status == status)
