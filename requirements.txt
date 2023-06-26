@@ -4,3 +4,5 @@ sqlalchemy
 python-consul
 psycopg2-binary
 fast-captcha
+tencentcloud-sdk-python
+redis[hiredis]

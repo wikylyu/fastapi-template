@@ -1,13 +1,14 @@
 from pydantic import BaseModel
 from pydantic.generics import GenericModel
 from typing import TypeVar, Generic, List
+from api.status import ApiStatus, AdminpiStatus
 
 T = TypeVar('T', bound=BaseModel)
 
 
 class StatusResponse(GenericModel, Generic[T]):
-    status: int
-    data: T
+    status: ApiStatus | AdminpiStatus
+    data: T | None
 
 
 class Pagination(GenericModel, Generic[T]):
@@ -18,7 +19,7 @@ class Pagination(GenericModel, Generic[T]):
 
 
 class PaginationResponse(GenericModel, Generic[T]):
-    status: int
+    status: ApiStatus | AdminpiStatus
     data: Pagination[T]
 
 
@@ -36,4 +37,5 @@ def success_response(data: any, cls: BaseModel | None = None, page: int | None =
 
 
 def failure_response(status: int, data: any = None):
-    return {'status': status, 'data': data}
+    return StatusResponse(status=status, data=data)
+    # return {'status': status, 'data': data}

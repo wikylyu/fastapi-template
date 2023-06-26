@@ -7,9 +7,12 @@ from db.psql import get_psql
 from db.models import User
 from db import user as userdb
 from api import schema
-from typing import Annotated
+from typing import Annotated, Any
 from datetime import datetime, timedelta
 from userapi.auth import SessionUserTokenKey, get_current_user, try_current_user
+from utils.string import random_digit
+from service import redis, sms
+
 
 router = APIRouter()
 
@@ -18,12 +21,28 @@ class SendLoginCodeRequest(BaseModel):
     phone: str = Field(min_length=1)
 
 
-@router.put('/login/code', response_model=StatusResponse[None])
+class SendWait(BaseModel):
+    wait: int
+
+
+@router.put('/login/code', response_model=StatusResponse[SendWait])
 async def send_login_code(req: SendLoginCodeRequest):
     '''发送登录用的短信验证码'''
+    max_age = 5*60  # 五分钟有效期
+    freq_duration = 60  # 60秒发送一次
+    key = 'user.login.phone.{}'.format(req.phone)
+    ttl = redis.ttl(key)
+    if ttl > 0:
+        delta = max_age-ttl
+        wait = int(freq_duration-delta)
+        if wait > 0:  # 发送过快
+            return failure_response(ApiStatus.PhoneCodeSentTooFast, SendWait(wait=wait))
 
-    # TODO 添加发送短信的代码
-    return success_response(None)
+    code = random_digit(6)
+    if not sms.send_sms(req.phone, 'phonecode', [code, "5"]):
+        return failure_response(ApiStatus.PhoenCodeSentFailure, SendWait(wait=0))
+    redis.setex(key, code, ex=max_age)
+    return success_response(SendWait(wait=freq_duration))
 
 
 class LoginWithPhoneRequest(BaseModel):

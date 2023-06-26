@@ -20,7 +20,7 @@ def create_user(db: Session, phone: str, password: str, nickname: str = '', avat
             return user
 
         ptype = random_password_type()
-        salt = ''.join(random.choice(string.ascii_letters) for i in range(10))
+        salt = random_salt()
         user = User(
             phone=phone,
             salt=salt,

@@ -15,4 +15,6 @@ class ApiStatus(Enum):
     OK = 0
 
     UserPasswordIncorrect = 1001
-    PhoneCodeIncorrect=1002
+    PhoneCodeIncorrect = 1002
+    PhoneCodeSentTooFast = 1003
+    PhoenCodeSentFailure = 1004
