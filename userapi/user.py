@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, Header, Response, Request
-from api.response import success_response, failure_response
+from api.response import success_response, failure_response, StatusResponse
 from api.status import ApiStatus
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from db.psql import get_psql
 from db.models import User
 from db import user as userdb
-from db import schema
+from api import schema
 from typing import Annotated
 from datetime import datetime, timedelta
-from userapi.auth import SessionUserTokenKey, get_current_user
+from userapi.auth import SessionUserTokenKey, get_current_user, try_current_user
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ class SendLoginCodeRequest(BaseModel):
     phone: str = Field(min_length=1)
 
 
-@router.put('/login/code')
+@router.put('/login/code', response_model=StatusResponse[None])
 async def send_login_code(req: SendLoginCodeRequest):
     '''发送登录用的短信验证码'''
 
@@ -35,7 +35,7 @@ class LoginWithPhoneRequest(BaseModel):
 CookieUserTokenKey = "usertoken"
 
 
-@router.put('/login')
+@router.put('/login', response_model=StatusResponse[schema.User])
 async def login_with_phone(req: LoginWithPhoneRequest, request: Request, user_agent: Annotated[str | None, Header()],
                            x_forwarded_for: Annotated[str | None, Header()] = None, db: Session = Depends(get_psql)):
     '''使用手机号登陆'''
@@ -57,7 +57,7 @@ async def login_with_phone(req: LoginWithPhoneRequest, request: Request, user_ag
     return success_response(user, schema.User)
 
 
-@router.put('/logout')
+@router.put('/logout', response_model=StatusResponse[None])
 async def logout(request: Request, self: User = Depends(get_current_user), db: Session = Depends(get_psql)):
     '''注销当前登陆'''
     userdb.set_user_token_invalid(db, self.current_token.id)
@@ -65,6 +65,13 @@ async def logout(request: Request, self: User = Depends(get_current_user), db: S
     return success_response(None)
 
 
-@router.get('/self')
+@router.get('/self', response_model=StatusResponse[schema.User])
 async def get_self(self: User = Depends(get_current_user)):
+    '''获取当前登录的用户信息'''
+    return success_response(self, schema.User)
+
+
+@router.get('/self/try', response_model=StatusResponse[schema.User])
+async def try_self(self: User = Depends(try_current_user)):
+    '''尝试获取用户信息，如果失败返回None'''
     return success_response(self, schema.User)

@@ -4,6 +4,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from config.consul import read_config_by_key
 from userapi.userapi import userapi_router
 from adminpi.adminpi import adminpi_router
+from urllib.parse import parse_qsl, urlencode
+from typing import Callable
 
 tags_metadata = [
     {
@@ -35,3 +37,16 @@ app.add_middleware(SessionMiddleware,
 
 app.include_router(userapi_router, prefix='/api')  # 用户端接口
 app.include_router(adminpi_router, prefix='/adminpi')  # 管理后台接口
+
+
+@app.middleware("http")
+async def filter_blank_query_params(request: Request, call_next: Callable):
+    scope = request.scope
+    if scope and scope.get("query_string"):
+        filtered_query_params = parse_qsl(
+            qs=scope["query_string"].decode("latin-1"),
+            keep_blank_values=False,
+        )
+        scope["query_string"] = urlencode(
+            filtered_query_params).encode("latin-1")
+    return await call_next(request)

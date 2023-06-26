@@ -4,20 +4,20 @@ from sqlalchemy.orm import Session
 from db.psql import get_psql
 from db.models import AdminStaffStatus, AdminStaff
 from db import staff as staffdb
-from db import schema
+from api import schema
 from pydantic import BaseModel, Field
 from api.status import AdminpiStatus
-from api.response import success_response, failure_response
+from api.response import success_response, failure_response, StatusResponse
 from datetime import datetime, timedelta
 from typing import Annotated
-from adminpi.auth import get_current_staff, try_current_staff,SessionStaffTokenKey
+from adminpi.auth import get_current_staff, try_current_staff, SessionStaffTokenKey
 from fast_captcha import img_captcha
 import re
 
 router = APIRouter()
 
 
-@router.get('/superuser')
+@router.get('/superuser', response_model=StatusResponse[bool])
 async def get_superuser(db: Session = Depends(get_psql)):
     '''获取当前的超级用户信息'''
     superuser = staffdb.get_superuser(db)
@@ -30,7 +30,7 @@ class CreateSuperuserRequest(BaseModel):
     password: str = Field(min_length=6)
 
 
-@router.post('/superuser')
+@router.post('/superuser', response_model=StatusResponse[bool])
 async def create_superuser(req: CreateSuperuserRequest, db: Session = Depends(get_psql)):
     '''创建超级用户，只有在超级用户不存在的时候才能创建'''
     superuser = staffdb.create_superuser(
@@ -48,7 +48,7 @@ class LoginRequest(BaseModel):
 SessionLoginCaptchaKey = 'logincaptcha'
 
 
-@router.put('/login')
+@router.put('/login', response_model=StatusResponse[schema.AdminStaff])
 async def login(req: LoginRequest, request: Request, response: Response, user_agent: Annotated[str | None, Header()],
                 x_forwarded_for: Annotated[str | None, Header()] = None,
                 db: Session = Depends(get_psql)):
@@ -69,7 +69,7 @@ async def login(req: LoginRequest, request: Request, response: Response, user_ag
 
     token = staffdb.create_admin_staff_token(
         db, staff.id, x_forwarded_for, user_agent, expired_time=datetime.now()+timedelta(days=days))
-    request.session[SessionStaffTokenKey]=str(token.id)
+    request.session[SessionStaffTokenKey] = str(token.id)
 
     return success_response(staff, schema.AdminStaff)
 
@@ -81,20 +81,20 @@ async def get_captch(request: Request):
     return StreamingResponse(content=img, media_type='image/png')
 
 
-@router.put('/logout')
+@router.put('/logout', response_model=StatusResponse[None])
 async def logout(request: Request, self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
     '''注销用户'''
-    request.session[SessionStaffTokenKey]=''
+    request.session[SessionStaffTokenKey] = ''
     staffdb.set_admin_staff_token_invalid(db, self.current_token.id)
     return success_response(None)
 
 
-@router.get('/self')
+@router.get('/self', response_model=StatusResponse[schema.AdminStaff])
 async def get_self(self: AdminStaff = Depends(get_current_staff)):
     return success_response(self, schema.AdminStaff)
 
 
-@router.get('/self/try')
+@router.get('/self/try', response_model=StatusResponse[schema.AdminStaff])
 async def get_self(self: AdminStaff = Depends(try_current_staff)):
     return success_response(self, schema.AdminStaff)
 
@@ -106,7 +106,7 @@ class UpdateSelfRequest(BaseModel):
     email: str = ''
 
 
-@router.put('/self')
+@router.put('/self', response_model=StatusResponse[schema.AdminStaff])
 async def update_self(req: UpdateSelfRequest, self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
     staffdb.update_admin_staff(db, self.id, req.name, req.phone, req.email)
     self = staffdb.get_admin_staff(db, self.id)
@@ -119,7 +119,7 @@ class UpdateSelfPasswordRequest(BaseModel):
     new: str = Field(min_length=6)
 
 
-@router.put('/self/password')
+@router.put('/self/password', response_model=StatusResponse[None])
 async def update_self_password(req: UpdateSelfPasswordRequest, self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
     '''修改账号密码'''
     if not staffdb.check_admin_staff_password(self, req.old):

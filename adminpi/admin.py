@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 from db.psql import get_psql
 from db.models import AdminStaffStatus, AdminStaff, AdminStaffTokenStatus
 from db import staff as staffdb
-from db import schema
+from api import schema
 from pydantic import BaseModel, Field
 from api.status import AdminpiStatus
-from api.response import success_response, failure_response
+from api.response import success_response, failure_response, PaginationResponse, StatusResponse
 from datetime import datetime, timedelta
 from typing import Annotated
 from adminpi.auth import get_current_staff, get_super_staff
@@ -16,8 +16,8 @@ import re
 router = APIRouter()
 
 
-@router.get('/staffs')
-async def find_admin_staffs(query: str = '', status: AdminStaffStatus | str = '',
+@router.get('/staffs', response_model=PaginationResponse[schema.AdminStaff])
+async def find_admin_staffs(query: str = '', status: AdminStaffStatus | None = None,
                             page: Annotated[int, Query(min=1)] = 1, page_size:  Annotated[int, Query(min=1, max=100)] = 10,
                             self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
     '''获取管理员账号列表'''
@@ -26,8 +26,8 @@ async def find_admin_staffs(query: str = '', status: AdminStaffStatus | str = ''
     return success_response(staffs, schema.AdminStaff, page=page, page_size=page_size, total=total)
 
 
-@router.get('/staff/tokens')
-async def find_admin_staff_tokens(staff_id: int = 0, status: AdminStaffTokenStatus | str = '',
+@router.get('/staff/tokens', response_model=PaginationResponse[schema.AdminStaffToken])
+async def find_admin_staff_tokens(staff_id: int = 0, status: AdminStaffTokenStatus | None = None,
                                   page: Annotated[int, Query(min=1)] = 1, page_size: Annotated[int, Query(min=5, max=100)] = 10,
                                   self: AdminStaff = Depends(get_super_staff), db: Session = Depends(get_psql)):
     '''查询登录记录'''
@@ -36,7 +36,7 @@ async def find_admin_staff_tokens(staff_id: int = 0, status: AdminStaffTokenStat
     return success_response(tokens, schema.AdminStaffToken, page=page, page_size=page_size, total=total)
 
 
-@router.get('/staff/{id}')
+@router.get('/staff/{id}', response_model=StatusResponse[schema.AdminStaff])
 async def get_admin_staff(id: int, self: AdminStaff = Depends(get_current_staff), db: Session = Depends(get_psql)):
     '''获取管理员账号的信息'''
     staff = staffdb.get_admin_staff(db, id)
@@ -50,7 +50,7 @@ class UpdateAdminStaffRequest(BaseModel):
     status: AdminStaffStatus
 
 
-@router.put('/staff/{id}')
+@router.put('/staff/{id}', response_model=StatusResponse[schema.AdminStaff])
 async def update_admin_staff(id: int, req: UpdateAdminStaffRequest, self: AdminStaff = Depends(get_super_staff), db: Session = Depends(get_psql)):
     '''更新管理员账号的基本信息'''
 
@@ -66,7 +66,7 @@ class UpdateAdminStaffPasswordRequest(BaseModel):
     logout: bool = False
 
 
-@router.put('/staff/{id}/password')
+@router.put('/staff/{id}/password', response_model=StatusResponse[None])
 async def update_admin_staff_password(id: int, req: UpdateAdminStaffPasswordRequest, self: AdminStaff = Depends(get_super_staff), db: Session = Depends(get_psql)):
     '''修改管理员账号的密码'''
     if not re.search('^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$', req.password):

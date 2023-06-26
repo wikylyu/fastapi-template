@@ -1,8 +1,12 @@
 
 from datetime import datetime
 from pydantic import BaseModel
-from db.models import AdminStaffStatus, AdminStaffTokenStatus,UserStatus
+from db.models import AdminStaffStatus, AdminStaffTokenStatus, UserStatus
 import uuid
+
+'''
+记录返回给客户端的数据结构
+'''
 
 
 class AdminStaff(BaseModel):
@@ -33,15 +37,16 @@ class AdminStaffToken(BaseModel):
     class Config:
         orm_mode = True
 
+
 class User(BaseModel):
-    id:int
-    phone:str
-    nickname:str
-    avatar:str
-    gender:str
-    status:UserStatus
-    wxopenid:str
-    wxunionid:str
+    id: int
+    phone: str
+    nickname: str
+    avatar: str
+    gender: str
+    status: UserStatus
+    wxopenid: str
+    wxunionid: str
     created_time: datetime
     updated_time: datetime
 

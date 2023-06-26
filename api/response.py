@@ -1,4 +1,25 @@
 from pydantic import BaseModel
+from pydantic.generics import GenericModel
+from typing import TypeVar, Generic, List
+
+T = TypeVar('T', bound=BaseModel)
+
+
+class StatusResponse(GenericModel, Generic[T]):
+    status: int
+    data: T
+
+
+class Pagination(GenericModel, Generic[T]):
+    page: int = 1
+    page_size: int = 10
+    total: int = 0
+    list: List[T] = []
+
+
+class PaginationResponse(GenericModel, Generic[T]):
+    status: int
+    data: Pagination[T]
 
 
 def success_response(data: any, cls: BaseModel | None = None, page: int | None = None, page_size: int | None = None, total: int | None = None):
