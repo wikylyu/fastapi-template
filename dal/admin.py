@@ -1,6 +1,7 @@
 import random
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from models.admin import AdminUser, AdminUserStatus, PasswordType
 from utils.string import random_str
@@ -12,19 +13,21 @@ class AdminRepo:
         return random.choice([PasswordType.MD5.value, PasswordType.SHA256.value, PasswordType.SHA512.value])
 
     @classmethod
-    def get_admin_user_by_username(cls, db: Session, username: str):
+    async def get_admin_user_by_username(cls, db: AsyncSession, username: str) -> AdminUser | None:
         """根据用户名获取管理员用户"""
-        return db.query(AdminUser).filter(AdminUser.username == username).first()
+        r = await db.execute(select(AdminUser).where(AdminUser.username == username))
+        return r.scalars().first()
 
     @classmethod
-    def check_super_admin_user_exists(cls, db: Session):
+    async def check_super_admin_user_exists(cls, db: AsyncSession):
         """检查是否存在超级管理员用户"""
-        return db.query(AdminUser).filter(AdminUser.is_superuser).first()
+        r = await db.execute(select(AdminUser).where(AdminUser.is_superuser))
+        return r.scalars().first()
 
     @classmethod
-    def create_admin_user(
+    async def create_admin_user(
         cls,
-        db: Session,
+        db: AsyncSession,
         username: str,
         name: str,
         password: str,
@@ -44,5 +47,5 @@ class AdminRepo:
             is_superuser=is_superuser,
         )
         db.add(admin_user)
-        db.flush()
+        await db.flush()
         return admin_user
