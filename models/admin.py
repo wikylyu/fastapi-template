@@ -1,6 +1,7 @@
+from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 
 from models.base import BaseTable
@@ -23,6 +24,8 @@ class AdminUser(BaseTable):
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     username: str = Column(String(32), unique=True, nullable=False)  # 登录名，用于登录
     name: str = Column(String(64), nullable=False, default="")  # 姓名
+    email: str = Column(String(64), nullable=False, default="")  # 邮箱
+    phone: str = Column(String(32), nullable=False, default="")  # 手机号
 
     password: str = Column(String(256), nullable=False, default="")  # 加密后的密码
     salt: str = Column(String(32), nullable=False, default="")  # 密码加密的盐
@@ -61,10 +64,14 @@ class AdminUserTokenStatus(Enum):
 
 
 class AdminUserToken(BaseTable):
-    id: str = Column(Integer, primary_key=True, default=uuidv4)
+    id: str = Column(String, primary_key=True, default=uuidv4)
     admin_user_id: int = Column(Integer, index=True, nullable=False)
     status: str = Column(String(32), index=True, nullable=False, default=AdminUserTokenStatus.ACTIVE.value)
+    expired_at: datetime | None = Column(DateTime, nullable=True)
 
     admin_user: AdminUser | None = relationship(
         "AdminUser", primaryjoin="AdminUser.id == foreign(AdminUserToken.admin_user_id)"
     )
+
+    def is_expired(self) -> bool:
+        return self.expired_at and self.expired_at < datetime.now()

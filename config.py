@@ -8,6 +8,8 @@ DEBUG = os.getenv("DEBUG", "True") == "True"
 # HTTP
 ROOT_PATH = os.getenv("ROOT_PATH", "/api")
 CORS_ALLOW_ORIGIN = os.getenv("CORS_ALLOW_ORIGIN", "*")
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "CMDMwjPd1lfWpmqPpTlqyk9GFVJhW1PG")
+SESSION_SECRET_NONCE = os.getenv("SESSION_SECRET_NONCE", "8Iz6FnZxeHH7")
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", f"postgresql+asyncpg://postgres@127.0.0.1:5432/{APPNAME.replace('-', '_')}")

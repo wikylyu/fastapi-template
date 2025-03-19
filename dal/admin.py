@@ -1,9 +1,11 @@
 import random
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 
-from models.admin import AdminUser, AdminUserStatus, PasswordType
+from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus, PasswordType
 from utils.string import random_str
 
 
@@ -33,6 +35,8 @@ class AdminRepo:
         password: str,
         status: str = AdminUserStatus.ACTIVE.value,
         is_superuser: bool = False,
+        email: str = "",
+        phone: str = "",
     ) -> AdminUser:
         salt = random_str(13)
         ptype = cls.random_ptype()
@@ -45,7 +49,27 @@ class AdminRepo:
             ptype=ptype,
             status=status,
             is_superuser=is_superuser,
+            email=email,
+            phone=phone,
         )
         db.add(admin_user)
         await db.flush()
         return admin_user
+
+    @classmethod
+    async def create_admin_user_token(cls, db: AsyncSession, admin_user_id: int, expired_at: datetime | None = None):
+        admin_user_token = AdminUserToken(
+            admin_user_id=admin_user_id,
+            status=AdminUserTokenStatus.ACTIVE.value,
+            expired_at=expired_at,
+        )
+        db.add(admin_user_token)
+        await db.flush()
+        return admin_user_token
+
+    @classmethod
+    async def get_admin_user_token(cls, db: AsyncSession, token: str) -> AdminUserToken | None:
+        r = await db.execute(
+            select(AdminUserToken).options(joinedload(AdminUserToken.admin_user)).where(AdminUserToken.id == token)
+        )
+        return r.scalars().first()

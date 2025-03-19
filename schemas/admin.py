@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from schemas.base import BaseSchema
@@ -15,5 +17,14 @@ class AdminUserSchema(BaseSchema):
     id: int
     username: str
     name: str
+    email: str
+    phone: str
     status: str
     is_superuser: bool
+
+
+class AdminUserTokenSchema(BaseSchema):
+    id: str
+    admin_user_id: int
+    status: str
+    expired_at: datetime
