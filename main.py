@@ -1,52 +1,46 @@
-from fastapi import FastAPI, Request
+import traceback
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
-from config.consul import read_config_by_key
-from userapi.userapi import userapi_router
-from adminpi.adminpi import adminpi_router
-from urllib.parse import parse_qsl, urlencode
-from typing import Callable
 
-tags_metadata = [
-    {
-        "name": "api",
-        "description": "用户端接口",
-    },
-    {
-        "name": "adminpi",
-        "description": "后台管理接口",
-    },
-]
+from config import APPNAME, APPVERSION, CORS_ALLOW_ORIGIN, DATABASE_AUTO_UPGRADE, DATABASE_URL, ROOT_PATH
+from middlewares.exception import ApiExceptionHandlingMiddleware
+from routers import admin
 
 
-app = FastAPI(title="后台模板", description="后台模板接口，分后台管理接口和用户端接口",
-              version="0.0.1", contact={"name": "Wiky Lyu",
-                                        "email": "admin@example.com", }, openapi_tags=tags_metadata,)
+def run_db_upgrade():
+    from alembic import command
+    from alembic.config import Config
 
-_http_config = read_config_by_key('http')
+    # 设置 Alembic 配置文件的路径
+    alembic_cfg = Config("alembic.ini")
+    # 使用config的数据库配置，避免两个地方配置数据库
+    alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+    # 执行数据库迁移（升级到最新版本）
+    command.upgrade(alembic_cfg, "head")
+    print("Database has been upgraded.")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        if DATABASE_AUTO_UPGRADE:
+            run_db_upgrade()
+    except Exception:
+        traceback.print_exc()
+    yield
+
+
+app = FastAPI(title=APPNAME, version=APPVERSION, lifespan=lifespan, root_path=ROOT_PATH)
+
+app.add_middleware(ApiExceptionHandlingMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_http_config['cors']['AllowOrigins'],
-    allow_credentials=_http_config['cors']['AllowCredentials'],
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_origins=[CORS_ALLOW_ORIGIN],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-app.add_middleware(SessionMiddleware,
-                   secret_key=_http_config['session'], max_age=3600*24*30)
 
-app.include_router(userapi_router, prefix='/api')  # 用户端接口
-app.include_router(adminpi_router, prefix='/adminpi')  # 管理后台接口
-
-
-@app.middleware("http")
-async def filter_blank_query_params(request: Request, call_next: Callable):
-    scope = request.scope
-    if scope and scope.get("query_string"):
-        filtered_query_params = parse_qsl(
-            qs=scope["query_string"].decode("latin-1"),
-            keep_blank_values=False,
-        )
-        scope["query_string"] = urlencode(
-            filtered_query_params).encode("latin-1")
-    return await call_next(request)
+app.include_router(admin.router, prefix="/admin", tags=["Admin"])

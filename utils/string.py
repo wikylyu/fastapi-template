@@ -2,9 +2,5 @@ import random
 import string
 
 
-def random_string(len: int) -> str:
-    return ''.join(random.choice(string.ascii_letters) for i in range(len))
-
-
-def random_digit(len: int) -> str:
-    return ''.join(random.choice(string.digits) for i in range(len))
+def random_str(len: int) -> str:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=len))
