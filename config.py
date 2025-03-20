@@ -17,6 +17,8 @@ DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA", "public")
 DATABASE_TABLE_PREFIX = os.getenv("DATABASE_TABLE_PREFIX", "t_")  # 数据库前缀
 DATABASE_AUTO_UPGRADE = os.getenv("DATABASE_AUTO_UPGRADE", "True") == "True"
 
-# Admin
+# Redis
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
+# Admin
 ADMIN_USERNAME_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_-]*$"

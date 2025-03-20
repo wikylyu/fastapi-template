@@ -10,6 +10,7 @@ class ApiErrors(Enum):
     ADMIN_USER_NOT_FOUND = 1001
     ADMIN_USER_PASSWORD_INCORRECT = 1002
     ADMIN_USER_BANNED = 1003
+    ADMIN_CAPTCHA_INCORRECT = 1004
 
 
 class ApiException(Exception):
