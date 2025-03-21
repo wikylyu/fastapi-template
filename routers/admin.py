@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from captcha.image import ImageCaptcha
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ from config import ADMIN_USERNAME_PATTERN, APPNAME, APPVERSION
 from dal.admin import AdminRepo
 from database.redis import get_redis
 from database.session import get_db
-from middlewares.depends import get_admin_user, get_admin_user_token
+from middlewares.depends import get_admin_user, get_admin_user_token, get_real_ip
 from models.admin import AdminUserStatus, AdminUserToken, AdminUserTokenStatus
 from routers.api import ApiErrors, ApiException
 from schemas.admin import AdminConfigSchema, AdminUserSchema, AdminUserTokenSchema
@@ -58,7 +58,7 @@ async def create_superuser(req_form: CreateSuperuserForm, db: AsyncSession = Dep
 
 @router.get("/login/captcha", summary="获取登录验证码", description="获取登录验证码的图片内容")
 async def get_login_captcha(redis: aioredis.Redis = Depends(get_redis)):
-    text = random_str(6)
+    text = random_str(5)
     image = ImageCaptcha(width=300, height=100)
     img_data = image.generate(text)
     id = uuidv4()
@@ -76,10 +76,11 @@ async def get_login_captcha(redis: aioredis.Redis = Depends(get_redis)):
 
 
 class LoginForm(BaseModel):
-    username: str = Field(max_length=32, min_length=1, pattern=ADMIN_USERNAME_PATTERN)
-    password: str = Field(min_length=1)
-    captcha: str = Field(min_length=1)
+    username: str = Field(max_length=32, min_length=1, pattern=ADMIN_USERNAME_PATTERN, description="用户名")
+    password: str = Field(min_length=1, max_length=64, description="密码")
+    captcha: str = Field(min_length=1, description="验证码")
     captcha_id: str = Field(default="")
+    remember: bool = Field(default=False, description="如果记住，则维持登录7天，否则只有一天")
 
 
 @router.put(
@@ -92,6 +93,8 @@ async def login(
     req_form: LoginForm,
     request: Request,
     response: Response,
+    user_agent: str = Header(),
+    ip: str = Depends(get_real_ip),
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
@@ -107,16 +110,18 @@ async def login(
         raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
     async with redis.client() as conn:
         captcha = await conn.getdel(f"login_captcha.{captcha_id}")
-        if captcha != req_form.captcha:
+        if not captcha or captcha.lower() != req_form.captcha.lower():
             raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
 
-    expired_at = datetime.now() + timedelta(days=7)
-    admin_user_token = await AdminRepo.create_admin_user_token(db, admin_user.id, expired_at=expired_at)
+    expired_at = datetime.now() + timedelta(days=7 if req_form.remember else 1)
+    admin_user_token = await AdminRepo.create_admin_user_token(
+        db, admin_user.id, expired_at=expired_at, ip=ip, user_agent=user_agent
+    )
 
     r = AdminUserTokenSchema.model_validate(admin_user_token)
     r.id = encrypt_service.encrypt(admin_user_token.id)
 
-    response.set_cookie("admin_user_token", r.id, expires=expired_at)
+    response.set_cookie("admin_user_token", r.id, expires=expired_at.astimezone(timezone.utc))
 
     return R.success(r)
 

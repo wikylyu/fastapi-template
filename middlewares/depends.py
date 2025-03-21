@@ -1,4 +1,4 @@
-from fastapi import Cookie, Depends, Header, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal.admin import AdminRepo
@@ -56,3 +56,32 @@ async def get_admin_user(
     if not admin_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     return admin_user
+
+
+async def get_real_ip(
+    request: Request,
+    x_forwarded_for: str | None = Header(default=None),
+    x_real_ip: str | None = Header(default=None),
+    cf_connecting_ip: str | None = Header(default=None),
+) -> str:
+    """
+    获取客户端真实 IP 地址，考虑以下情况：
+    - 直接连接：使用 request.client.host
+    - 代理服务器：检查 X-Forwarded-For 或 X-Real-IP
+    - Cloudflare：优先使用 CF-Connecting-IP
+    """
+    # 优先级 1：Cloudflare 的 CF-Connecting-IP
+    if cf_connecting_ip:
+        return cf_connecting_ip
+
+    # 优先级 2：X-Forwarded-For（代理链中的第一个 IP）
+    if x_forwarded_for:
+        # X-Forwarded-For 可能包含多个 IP，取第一个（客户端 IP）
+        return x_forwarded_for.split(",")[0].strip()
+
+    # 优先级 3：X-Real-IP（某些代理设置的单一 IP）
+    if x_real_ip:
+        return x_real_ip
+
+    # 默认：直接使用 request.client.host（无代理或代理未正确配置）
+    return request.client.host

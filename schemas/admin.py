@@ -28,3 +28,5 @@ class AdminUserTokenSchema(BaseSchema):
     admin_user_id: int
     status: str
     expired_at: datetime
+    ip: str
+    user_agent: str

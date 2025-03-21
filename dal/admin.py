@@ -57,11 +57,20 @@ class AdminRepo:
         return admin_user
 
     @classmethod
-    async def create_admin_user_token(cls, db: AsyncSession, admin_user_id: int, expired_at: datetime | None = None):
+    async def create_admin_user_token(
+        cls,
+        db: AsyncSession,
+        admin_user_id: int,
+        expired_at: datetime | None = None,
+        ip: str = "",
+        user_agent: str = "",
+    ):
         admin_user_token = AdminUserToken(
             admin_user_id=admin_user_id,
             status=AdminUserTokenStatus.ACTIVE.value,
             expired_at=expired_at,
+            ip=ip,
+            user_agent=user_agent,
         )
         db.add(admin_user_token)
         await db.flush()
