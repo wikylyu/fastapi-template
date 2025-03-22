@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import ADMIN_USERNAME_PATTERN, APPNAME, APPVERSION
+from config import ADMIN_USERNAME_PATTERN, APPNAME, APPVERSION, COPYRIGHT
 from dal.admin import AdminRepo
 from database.redis import get_redis
 from database.session import get_db
@@ -25,7 +25,8 @@ router = APIRouter()
 @router.get("/config", response_model=R[AdminConfigSchema], summary="获取管理配置", description="获取系统配置")
 async def get_config(db: AsyncSession = Depends(get_db)):
     cfg = {
-        "name": APPNAME,
+        "appname": APPNAME,
+        "copyright": COPYRIGHT,
         "version": APPVERSION,
         "admin_username_pattern": ADMIN_USERNAME_PATTERN,
     }
@@ -137,6 +138,7 @@ async def get_profile(admin_user: AdminUserSchema = Depends(get_admin_user)):
 
 
 class UpdateProfileForm(BaseModel):
+    name: str = Field(max_length=64, min_length=1)
     email: str = Field(max_length=64)
     phone: str = Field(max_length=32)
 
@@ -151,6 +153,7 @@ async def update_profile(
 ):
     admin_user.email = req_form.email
     admin_user.phone = req_form.phone
+    admin_user.name = req_form.name
     return R.success(admin_user)
 
 

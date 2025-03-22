@@ -8,7 +8,8 @@ from schemas.base import BaseSchema
 class AdminConfigSchema(BaseModel):
     onboarding: bool
     version: str
-    name: str
+    appname: str
+    copyright: str
 
     admin_username_pattern: str
 

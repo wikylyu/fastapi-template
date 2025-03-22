@@ -2,6 +2,7 @@ import os
 
 # App
 APPNAME = os.getenv("APPNAME", "FastAPI 管理系统")
+COPYRIGHT = os.getenv("COPYRIGHT", "© 2025 Wiky Lyu")
 APPVERSION = os.getenv("APPVERSION", "0.0.1")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
