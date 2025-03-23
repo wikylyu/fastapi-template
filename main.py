@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import APPNAME, APPVERSION, CORS_ALLOW_ORIGIN, DATABASE_AUTO_UPGRADE, ROOT_PATH
 from middlewares.exception import ApiExceptionHandlingMiddleware
-from routers import admin
+from routers import admin, system
 
 
 async def run_db_upgrade():
@@ -45,3 +45,4 @@ app.add_middleware(
 )
 
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(system.router, prefix="/system", tags=["System"])

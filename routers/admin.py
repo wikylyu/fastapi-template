@@ -109,13 +109,6 @@ async def login(
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    admin_user = await AdminRepo.get_admin_user_by_username(db, req_form.username)
-    if not admin_user:
-        raise ApiException(ApiErrors.ADMIN_USER_NOT_FOUND)
-    if admin_user.status != AdminUserStatus.ACTIVE.value:
-        raise ApiException(ApiErrors.ADMIN_USER_BANNED)
-    if not admin_user.auth(req_form.password):
-        raise ApiException(ApiErrors.ADMIN_USER_PASSWORD_INCORRECT)
     captcha_id = req_form.captcha_id or request.cookies.get("login_captcha_id")
     if not captcha_id:
         raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
@@ -123,6 +116,14 @@ async def login(
         captcha = await conn.getdel(f"login_captcha.{captcha_id}")
         if not captcha or captcha.lower() != req_form.captcha.lower():
             raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
+
+    admin_user = await AdminRepo.get_admin_user_by_username(db, req_form.username)
+    if not admin_user:
+        raise ApiException(ApiErrors.ADMIN_USER_NOT_FOUND)
+    if admin_user.status != AdminUserStatus.ACTIVE.value:
+        raise ApiException(ApiErrors.ADMIN_USER_BANNED)
+    if not admin_user.auth(req_form.password):
+        raise ApiException(ApiErrors.ADMIN_USER_PASSWORD_INCORRECT)
 
     expired_at = datetime.now() + timedelta(days=7 if req_form.remember else 1)
     admin_user_token = await AdminRepo.create_admin_user_token(
