@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, timedelta, timezone
 
 from captcha.image import ImageCaptcha
@@ -11,7 +12,7 @@ from dal.admin import AdminRepo
 from database.redis import get_redis
 from database.session import get_db
 from middlewares.depends import get_admin_user, get_admin_user_token, get_real_ip
-from models.admin import AdminUserStatus, AdminUserToken, AdminUserTokenStatus
+from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
 from routers.api import ApiErrors, ApiException
 from schemas.admin import AdminConfigSchema, AdminUserSchema, AdminUserTokenSchema
 from schemas.response import R
@@ -57,23 +58,32 @@ async def create_superuser(req_form: CreateSuperuserForm, db: AsyncSession = Dep
     return R.success(admin_user)
 
 
-@router.get("/login/captcha", summary="获取登录验证码", description="获取登录验证码的图片内容")
-async def get_login_captcha(redis: aioredis.Redis = Depends(get_redis)):
-    text = random_str(5)
+async def generate_captcha(redis: aioredis.Redis, name: str, ex: int = 5 * 60):
+    text = random_str(random.choice([5, 6]))
     image = ImageCaptcha(width=300, height=100)
     img_data = image.generate(text)
     id = uuidv4()
 
     async with redis.client() as conn:
-        await conn.set(f"login_captcha.{id}", text, ex=5 * 60)
+        await conn.set(f"{name}.{id}", text, ex=ex)
 
     response = Response(
         content=img_data.read(),
         media_type="image/png",
     )
-    response.set_cookie("login_captcha_id", id, expires=5 * 60)
+    response.set_cookie(f"{name}_id", id, expires=ex)
 
     return response
+
+
+@router.get(
+    "/login/captcha",
+    responses={200: {"content": {"image/png": {}}, "description": "返回一张 PNG 格式的图片,大小是300x100"}},
+    summary="获取登录验证码",
+    description="获取登录验证码的图片内容",
+)
+async def get_login_captcha(redis: aioredis.Redis = Depends(get_redis)):
+    return await generate_captcha(redis, "login_captcha")
 
 
 class LoginForm(BaseModel):
@@ -162,4 +172,37 @@ async def logout(response: Response, admin_user_token: AdminUserToken | None = D
     response.delete_cookie("admin_user_token")
     if admin_user_token:
         admin_user_token.status = AdminUserTokenStatus.REVOKED.value
+    return R.success(None)
+
+
+@router.get(
+    "/password/captcha",
+    responses={200: {"content": {"image/png": {}}, "description": "返回一张 PNG 格式的图片,大小是300x100"}},
+    summary="获取修改密码验证码",
+    description="获取修改密码验证码的图片内容",
+)
+async def get_password_captcha(redis: aioredis.Redis = Depends(get_redis)):
+    return await generate_captcha(redis, "update_password_captcha")
+
+
+class UpdatePasswordForm(BaseModel):
+    password: str = Field(min_length=6, max_length=64)
+    captcha: str = Field(min_length=1, description="验证码")
+    captcha_id: str = Field(default="")
+
+
+@router.put("/password", response_model=R[None], summary="修改密码", description="修改当前登录账号的密码")
+async def update_password(
+    req_form: UpdatePasswordForm,
+    request: Request,
+    admin_user: AdminUserSchema = Depends(get_admin_user),
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    captcha_id = req_form.captcha_id or request.cookies.get("update_password_captcha_id")
+    async with redis.client() as conn:
+        captcha = await conn.getdel(f"update_password_captcha.{captcha_id}")
+        if not captcha or captcha.lower() != req_form.captcha.lower():
+            raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
+    admin_user.salt = random_str(13)
+    admin_user.password = AdminUser.encrypt_password(req_form.password, admin_user.salt, admin_user.ptype)
     return R.success(None)
