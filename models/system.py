@@ -14,6 +14,8 @@ class Permission(BaseTable):
     sort = Column(Integer, nullable=False, default=0, index=True)  # 排序
     created_by = Column(Integer, nullable=False, index=True)  # 创建人
 
+    children = []
+
     __table_args__ = (  # 设置method和path的联合unique
         UniqueConstraint("parent_id", "code", name="parent_code_unique"),
     )

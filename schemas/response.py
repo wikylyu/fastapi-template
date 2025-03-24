@@ -21,3 +21,14 @@ class R(BaseModel, Generic[T]):
 
     def to_json(self):
         return {"status": self.status, "data": self.data}
+
+
+class P(BaseModel, Generic[T]):
+    total: int
+    page: int
+    page_size: int
+    items: list[T]
+
+    @classmethod
+    def from_list(cls, total: int, page: int, page_size: int, items: list[T]):
+        return cls(total=total, page=page, page_size=page_size, items=items)
