@@ -10,6 +10,7 @@ engine = create_async_engine(
     DATABASE_URL,
     pool_pre_ping=True,
     poolclass=NullPool,
+    echo=True,
 )
 async_session_local = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False, class_=AsyncSession

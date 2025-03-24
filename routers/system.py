@@ -63,7 +63,7 @@ async def create_api(
     if api:
         raise ApiException(ApiErrors.API_EXISTS)
 
-    for _, permission_id in req_form.permission_ids:
+    for permission_id in req_form.permission_ids:
         permission = await SystemRepo.get_permission(db, permission_id)
         if not permission:
             raise ApiException(ApiErrors.PERMISSION_NOT_FOUND)
@@ -100,7 +100,7 @@ async def update_api(
     if not api:
         raise ApiException(ApiErrors.API_NOT_FOUND)
 
-    for _, permission_id in req_form.permission_ids:
+    for permission_id in req_form.permission_ids:
         permission = await SystemRepo.get_permission(db, permission_id)
         if not permission:
             raise ApiException(ApiErrors.PERMISSION_NOT_FOUND)
@@ -225,4 +225,51 @@ async def find_permissions(
     admin_user: AdminUser = Depends(get_super_admin_user),
 ):
     permissions = await SystemRepo.find_chilren_permissions_by_parent_r(db, parent_id=0)
+    return R.success(permissions)
+
+
+@router.delete(
+    "/permission/{id}",
+    response_model=R[None],
+    summary="删除权限",
+    description="删除权限，会删除所有子权限，并且从API山移除对应权限",
+)
+async def delete_permission(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = Depends(get_super_admin_user),
+):
+    await SystemRepo.delete_permission(db, id)
+    return R.success(None)
+
+
+class UpdatePermissionSortForm(BaseModel):
+    sort: int = Field(description="排序")
+
+
+@router.put("/permission/{id}/sort", response_model=R[None], summary="权限排序", description="权限排序")
+async def update_permission_sort(
+    id: int,
+    req_form: UpdatePermissionSortForm,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = Depends(get_super_admin_user),
+):
+    await SystemRepo.update_permission_sort(db, id, req_form.sort)
+    return R.success(None)
+
+
+@router.get("/permission/{id}", response_model=R[list[PermissionSchema]], summary="权限详情", description="权限详情")
+async def find_permission(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = Depends(get_super_admin_user),
+):
+    permissions = []
+    while id > 0:
+        permission = await SystemRepo.get_permission(db, id)
+        if not permission:
+            raise ApiException(ApiErrors.PERMISSION_NOT_FOUND)
+        permissions.append(permission)
+        id = permission.parent_id
+    permissions.reverse()
     return R.success(permissions)

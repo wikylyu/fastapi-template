@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.system import Api, Permission
@@ -60,8 +60,11 @@ class SystemRepo:
         return (apis, total_count)
 
     @classmethod
-    async def get_permission(cls, db: AsyncSession, id: int) -> Permission | None:
-        r = await db.execute(select(Permission).where(Permission.id == id))
+    async def get_permission(cls, db: AsyncSession, id: int, with_for_update: bool = False) -> Permission | None:
+        query = select(Permission).where(Permission.id == id)
+        if with_for_update:
+            query = query.with_for_update()
+        r = await db.execute(query)
         return r.scalars().first()
 
     @classmethod
@@ -72,7 +75,7 @@ class SystemRepo:
     @classmethod
     async def find_chilren_permissions_by_parent(cls, db: AsyncSession, parent_id: int) -> list[Permission]:
         r = await db.execute(
-            select(Permission).order_by(Permission.sort.desc()).where(Permission.parent_id == parent_id)
+            select(Permission).order_by(Permission.sort.asc()).where(Permission.parent_id == parent_id)
         )
         return r.scalars().all()
 
@@ -106,5 +109,47 @@ class SystemRepo:
             name=name, code=code, remark=remark, parent_id=parent_id, sort=sort, created_by=created_by
         )
         db.add(permission)
+        await db.flush()
+        return permission
+
+    @classmethod
+    async def delete_permission(cls, db: AsyncSession, id: int):
+        permission = await cls.get_permission(db, id, with_for_update=True)
+        if not permission:
+            return
+        children = await cls.find_chilren_permissions_by_parent(db, id)
+        for child in children:
+            await cls.delete_permission(db, child.id)
+
+        await db.delete(permission)
+
+        await db.execute(
+            update(Api)
+            .where(Api.permission_ids.contains([id]))
+            .values(permission_ids=func.array_remove(Api.permission_ids, id))
+        )
+
+    @classmethod
+    async def update_permission_sort(cls, db: AsyncSession, id: int, sort: int) -> Permission | None:
+        permission = await cls.get_permission(db, id, with_for_update=True)
+        if not permission:
+            return
+        if sort > permission.sort:
+            await db.execute(
+                update(Permission)
+                .where(Permission.sort > permission.sort)
+                .where(Permission.sort <= sort)
+                .where(Permission.parent_id == permission.parent_id)
+                .values(sort=Permission.sort - 1)
+            )
+        elif sort < permission.sort:
+            await db.execute(
+                update(Permission)
+                .where(Permission.sort >= sort)
+                .where(Permission.sort < permission.sort)
+                .where(Permission.parent_id == permission.parent_id)
+                .values(sort=Permission.sort + 1)
+            )
+        permission.sort = sort
         await db.flush()
         return permission
