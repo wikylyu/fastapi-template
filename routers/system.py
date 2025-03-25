@@ -8,13 +8,13 @@ from middlewares.depends import get_super_admin_user
 from models.admin import AdminUser
 from routers.api import ApiErrors, ApiException
 from schemas.response import P, R
-from schemas.system import ApiSchema, Endpoint, PermissionSchema
+from schemas.system import ApiSchema, PermissionSchema, RouteSchema
 
 router = APIRouter()
 
 
-@router.get("/endpoints", response_model=R[list[Endpoint]], summary="查找路由", description="查找路由")
-async def find_endpoints(
+@router.get("/routes", response_model=R[list[RouteSchema]], summary="查找路由", description="查找路由")
+async def find_routes(
     request: Request,
     method: str = Query(default="", description="请求方法"),
     path: str = Query(default="", description="请求路径"),
@@ -32,7 +32,7 @@ async def find_endpoints(
     return R.success(routes)
 
 
-def check_endpoint(method: str, path: str, request: Request) -> bool:
+def check_route(method: str, path: str, request: Request) -> bool:
     """
     检查路由是否存在
     """
@@ -56,8 +56,8 @@ async def create_api(
     db: AsyncSession = Depends(get_db),
     admin_user: AdminUser = Depends(get_super_admin_user),
 ):
-    if not check_endpoint(req_form.method, req_form.path, request):
-        raise ApiException(ApiErrors.ENDPOINT_NOT_FOUND)
+    if not check_route(req_form.method, req_form.path, request):
+        raise ApiException(ApiErrors.ROUTE_NOT_FOUND)
 
     api = await SystemRepo.get_api_by_method_and_path(db, req_form.method, req_form.path)
     if api:
@@ -89,8 +89,8 @@ async def update_api(
     db: AsyncSession = Depends(get_db),
     admin_user: AdminUser = Depends(get_super_admin_user),
 ):
-    if not check_endpoint(req_form.method, req_form.path, request):
-        raise ApiException(ApiErrors.ENDPOINT_NOT_FOUND)
+    if not check_route(req_form.method, req_form.path, request):
+        raise ApiException(ApiErrors.ROUTE_NOT_FOUND)
 
     api = await SystemRepo.get_api_by_method_and_path(db, req_form.method, req_form.path)
     if api and api.id != id:

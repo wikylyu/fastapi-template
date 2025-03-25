@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from schemas.base import BaseSchema
 
 
-class Endpoint(BaseModel):
+class RouteSchema(BaseModel):
     method: str
     path: str
 
