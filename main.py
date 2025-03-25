@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import APPNAME, APPVERSION, CORS_ALLOW_ORIGIN, DATABASE_AUTO_UPGRADE, ROOT_PATH
+from config import APPNAME, APPVERSION, CORS_ALLOW_ORIGIN, DATABASE_AUTO_UPGRADE, DEBUG, ROOT_PATH
 from middlewares.exception import ApiExceptionHandlingMiddleware
 from routers import admin, system
 
@@ -20,7 +20,7 @@ async def run_db_upgrade():
 
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, command.upgrade, alembic_cfg, "head")
-    print("Database has been upgraded.")
+    # get_logger("alembic").info("Database has been upgraded.")
 
 
 @asynccontextmanager
@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title=APPNAME, version=APPVERSION, lifespan=lifespan, root_path=ROOT_PATH)
+app = FastAPI(title=APPNAME, version=APPVERSION, lifespan=lifespan, root_path=ROOT_PATH, debug=DEBUG)
 
 app.add_middleware(ApiExceptionHandlingMiddleware)
 app.add_middleware(

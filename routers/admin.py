@@ -207,3 +207,11 @@ async def update_password(
     admin_user.salt = random_str(13)
     admin_user.password = AdminUser.encrypt_password(req_form.password, admin_user.salt, admin_user.ptype)
     return R.success(None)
+
+
+@router.get("/user/{id}", response_model=R[AdminUserSchema], summary="获取用户详情", description="通过ID获取用户详情")
+async def get_admin_user(id: int, db: AsyncSession = Depends(get_db)):
+    user = await AdminRepo.get_admin_user(db, id)
+    if not user:
+        raise ApiException(ApiErrors.ADMIN_USER_NOT_FOUND)
+    return R.success(user)

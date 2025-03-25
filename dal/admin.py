@@ -15,6 +15,11 @@ class AdminRepo:
         return random.choice([PasswordType.MD5.value, PasswordType.SHA256.value, PasswordType.SHA512.value])
 
     @classmethod
+    async def get_admin_user(cls, db: AsyncSession, id: int) -> AdminUser | None:
+        r = await db.execute(select(AdminUser).where(AdminUser.id == id))
+        return r.scalars().first()
+
+    @classmethod
     async def get_admin_user_by_username(cls, db: AsyncSession, username: str) -> AdminUser | None:
         """根据用户名获取管理员用户"""
         r = await db.execute(select(AdminUser).where(AdminUser.username == username))
