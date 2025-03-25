@@ -16,11 +16,10 @@ async def run_db_upgrade():
 
     # 设置 Alembic 配置文件的路径
     alembic_cfg = Config("alembic.ini")
-    # 执行数据库迁移（升级到最新版本）
 
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, command.upgrade, alembic_cfg, "head")
-    # get_logger("alembic").info("Database has been upgraded.")
+    print("Database migration completed successfully")
 
 
 @asynccontextmanager

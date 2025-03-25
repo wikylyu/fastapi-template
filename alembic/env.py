@@ -1,6 +1,8 @@
 import asyncio
 from logging.config import fileConfig
 
+from sqlalchemy.sql import text
+
 from alembic import context
 from database.session import Base, engine
 from models import admin, system  # noqa: F401
@@ -45,6 +47,7 @@ def do_run_migrations_online(connection) -> None:
 
 async def main():
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.run_sync(do_run_migrations_online)
 
 

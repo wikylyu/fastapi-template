@@ -2,7 +2,7 @@ import random
 from datetime import datetime, timedelta, timezone
 
 from captcha.image import ImageCaptcha
-from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, Field
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,11 +11,11 @@ from config import ADMIN_USERNAME_PATTERN, APPNAME, APPVERSION, COPYRIGHT
 from dal.admin import AdminRepo
 from database.redis import get_redis
 from database.session import get_db
-from middlewares.depends import get_admin_user, get_admin_user_token, get_real_ip
+from middlewares.depends import get_client_real_ip, get_current_admin_user, get_current_admin_user_token
 from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
 from routers.api import ApiErrors, ApiException
 from schemas.admin import AdminConfigSchema, AdminUserSchema, AdminUserTokenSchema
-from schemas.response import R
+from schemas.response import P, R
 from services.encrypt import encrypt_service
 from utils.string import random_str
 from utils.uuid import uuidv4
@@ -105,7 +105,7 @@ async def login(
     request: Request,
     response: Response,
     user_agent: str = Header(),
-    ip: str = Depends(get_real_ip),
+    ip: str = Depends(get_client_real_ip),
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
@@ -144,7 +144,7 @@ async def login(
     summary="获取管理员信息",
     description="获取当前登录的管理员信息",
 )
-async def get_profile(admin_user: AdminUserSchema = Depends(get_admin_user)):
+async def get_profile(admin_user: AdminUser = Depends(get_current_admin_user)):
     return R.success(admin_user)
 
 
@@ -159,7 +159,7 @@ class UpdateProfileForm(BaseModel):
 )
 async def update_profile(
     req_form: UpdateProfileForm,
-    admin_user: AdminUserSchema = Depends(get_admin_user),
+    admin_user: AdminUser = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     admin_user.email = req_form.email
@@ -169,7 +169,7 @@ async def update_profile(
 
 
 @router.put("/logout", response_model=R[None], summary="管理员登出", description="管理员登出，清除登录状态")
-async def logout(response: Response, admin_user_token: AdminUserToken | None = Depends(get_admin_user_token)):
+async def logout(response: Response, admin_user_token: AdminUserToken | None = Depends(get_current_admin_user_token)):
     response.delete_cookie("admin_user_token")
     if admin_user_token:
         admin_user_token.status = AdminUserTokenStatus.REVOKED.value
@@ -196,7 +196,7 @@ class UpdatePasswordForm(BaseModel):
 async def update_password(
     req_form: UpdatePasswordForm,
     request: Request,
-    admin_user: AdminUserSchema = Depends(get_admin_user),
+    admin_user: AdminUser = Depends(get_current_admin_user),
     redis: aioredis.Redis = Depends(get_redis),
 ):
     captcha_id = req_form.captcha_id or request.cookies.get("update_password_captcha_id")
@@ -210,8 +210,23 @@ async def update_password(
 
 
 @router.get("/user/{id}", response_model=R[AdminUserSchema], summary="获取用户详情", description="通过ID获取用户详情")
-async def get_admin_user(id: int, db: AsyncSession = Depends(get_db)):
+async def get_admin_user(
+    id: int, db: AsyncSession = Depends(get_db), admin_user: AdminUser = Depends(get_current_admin_user)
+):
     user = await AdminRepo.get_admin_user(db, id)
     if not user:
         raise ApiException(ApiErrors.ADMIN_USER_NOT_FOUND)
     return R.success(user)
+
+
+@router.get("/users", response_model=R[P[AdminUserSchema]], summary="获取用户列表", description="获取用户列表")
+async def find_admin_users(
+    query: str = Query(default=""),
+    status: str = Query(default=""),
+    page: int = Query(default=1, min=1),
+    page_size: int = Query(default=10, min=1, max=100),
+    db: AsyncSession = Depends(get_db),
+    admin_user: AdminUser = Depends(get_current_admin_user),
+):
+    admin_users, total_count = await AdminRepo.find_admin_users(db, query, status, page, page_size)
+    return R.success(P.from_list(total_count, page, page_size, admin_users))

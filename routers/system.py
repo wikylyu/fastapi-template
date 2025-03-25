@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal.system import SystemRepo
 from database.session import get_db
-from middlewares.depends import get_super_admin_user
+from middlewares.depends import get_current_super_admin_user
 from models.admin import AdminUser
 from routers.api import ApiErrors, ApiException
 from schemas.response import P, R
@@ -18,7 +18,7 @@ async def find_routes(
     request: Request,
     method: str = Query(default="", description="请求方法"),
     path: str = Query(default="", description="请求路径"),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     app = request.app
     routes = []
@@ -54,7 +54,7 @@ async def create_api(
     req_form: CreateApiForm,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     if not check_route(req_form.method, req_form.path, request):
         raise ApiException(ApiErrors.ROUTE_NOT_FOUND)
@@ -87,7 +87,7 @@ async def update_api(
     req_form: CreateApiForm,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     if not check_route(req_form.method, req_form.path, request):
         raise ApiException(ApiErrors.ROUTE_NOT_FOUND)
@@ -117,7 +117,7 @@ async def update_api(
 async def delete_api(
     id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     await SystemRepo.delete_api(db, id)
     return R.success(None)
@@ -130,7 +130,7 @@ async def find_apis(
     page: int = Query(default=1, description="页码"),
     page_size: int = Query(default=10, description="每页条数"),
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     apis, total_count = await SystemRepo.find_apis(db, method, path, page, page_size)
     return R.success(P.from_list(total_count, page, page_size, apis))
@@ -147,7 +147,7 @@ class CreatePermissionForm(BaseModel):
 async def create_permission(
     req_form: CreatePermissionForm,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     if req_form.parent_id:
         parent = await SystemRepo.get_permission(db, req_form.parent_id)
@@ -192,7 +192,7 @@ async def update_permission(
     req_form: UpdatePermissionForm,
     id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     permission = await SystemRepo.get_permission(db, id)
     if not permission:
@@ -222,7 +222,7 @@ async def update_permission(
 @router.get("/permissions", response_model=R[list[PermissionSchema]], summary="查找权限", description="查找权限")
 async def find_permissions(
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     permissions = await SystemRepo.find_chilren_permissions_by_parent_r(db, parent_id=0)
     return R.success(permissions)
@@ -237,7 +237,7 @@ async def find_permissions(
 async def delete_permission(
     id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     await SystemRepo.delete_permission(db, id)
     return R.success(None)
@@ -252,7 +252,7 @@ async def update_permission_sort(
     id: int,
     req_form: UpdatePermissionSortForm,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     await SystemRepo.update_permission_sort(db, id, req_form.sort)
     return R.success(None)
@@ -262,7 +262,7 @@ async def update_permission_sort(
 async def find_permission(
     id: int,
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_super_admin_user),
+    admin_user: AdminUser = Depends(get_current_super_admin_user),
 ):
     permissions = []
     while id > 0:

@@ -1,8 +1,8 @@
 import random
 from datetime import datetime
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 
 from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus, PasswordType
@@ -42,6 +42,7 @@ class AdminRepo:
         is_superuser: bool = False,
         email: str = "",
         phone: str = "",
+        created_by: int = 0,
     ) -> AdminUser:
         salt = random_str(13)
         ptype = cls.random_ptype()
@@ -56,6 +57,7 @@ class AdminRepo:
             is_superuser=is_superuser,
             email=email,
             phone=phone,
+            created_by=created_by,
         )
         db.add(admin_user)
         await db.flush()
@@ -87,3 +89,24 @@ class AdminRepo:
             select(AdminUserToken).options(joinedload(AdminUserToken.admin_user)).where(AdminUserToken.id == token)
         )
         return r.scalars().first()
+
+    @classmethod
+    async def find_admin_users(
+        cls, db: AsyncSession, query: str = "", status: str = "", page: int = 1, page_size: int = 10
+    ) -> tuple[list[AdminUser], int]:
+        base_query = select(AdminUser).order_by(AdminUser.created_at.desc())
+        if query:
+            base_query = base_query.where((AdminUser.name.contains(query)) | (AdminUser.username.contains(query)))
+        if status:
+            base_query = base_query.where(AdminUser.status == status)
+        # 分页查询
+        paginated_query = base_query.limit(page_size).offset((page - 1) * page_size)
+        r = await db.execute(paginated_query)
+        admin_users = r.scalars().all()
+
+        # 总数查询
+        count_query = select(func.count()).select_from(base_query.subquery())
+        r_count = await db.execute(count_query)
+        total_count = r_count.scalar()
+
+        return (admin_users, total_count)

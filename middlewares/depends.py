@@ -26,7 +26,7 @@ async def get_auth_token(
         return None
 
 
-async def get_admin_user_token(
+async def get_current_admin_user_token(
     token: str | None = Depends(get_auth_token),
     db: AsyncSession = Depends(get_db),
 ) -> AdminUserToken | None:
@@ -42,31 +42,31 @@ async def get_admin_user_token(
     return admin_user_token
 
 
-async def try_admin_user(
-    admin_user_token: AdminUserToken | None = Depends(get_admin_user_token),
+async def try_current_admin_user(
+    admin_user_token: AdminUserToken | None = Depends(get_current_admin_user_token),
 ) -> AdminUser | None:
     if not admin_user_token:
         return None
     return admin_user_token.admin_user
 
 
-async def get_admin_user(
-    admin_user: AdminUser | None = Depends(try_admin_user),
+async def get_current_admin_user(
+    admin_user: AdminUser | None = Depends(try_current_admin_user),
 ) -> AdminUser:
     if not admin_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     return admin_user
 
 
-async def get_super_admin_user(
-    admin_user: AdminUser = Depends(get_admin_user),
+async def get_current_super_admin_user(
+    admin_user: AdminUser = Depends(get_current_admin_user),
 ) -> AdminUser:
     if not admin_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return admin_user
 
 
-async def get_real_ip(
+async def get_client_real_ip(
     request: Request,
     x_forwarded_for: str | None = Header(default=None),
     x_real_ip: str | None = Header(default=None),

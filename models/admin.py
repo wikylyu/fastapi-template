@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String
 from sqlalchemy.orm import relationship
 
 from models.base import BaseTable
@@ -34,6 +34,12 @@ class AdminUser(BaseTable):
     status: str = Column(String(32), nullable=False, default=AdminUserStatus.ACTIVE.value, index=True)
 
     is_superuser: bool = Column(Boolean, nullable=False, default=False)  # 是否是超级管理员
+    created_by: int = Column(Integer, nullable=False, index=True, default=0, server_default="0")
+
+    __table_args__ = (
+        Index("idx_username_trgm", "username", postgresql_using="gin", postgresql_ops={"username": "gin_trgm_ops"}),
+        Index("idx_name_trgm", "name", postgresql_using="gin", postgresql_ops={"name": "gin_trgm_ops"}),
+    )
 
     def auth(self, password: str) -> bool:
         if not self.password:
