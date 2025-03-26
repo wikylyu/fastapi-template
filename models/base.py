@@ -21,10 +21,9 @@ class BaseTable(Base):
 
     __abstract__ = True  # 定义为抽象基类
     __allow_unmapped__ = True
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now(), index=True)
     updated_at = Column(DateTime, default=func.now(), onupdate=datetime.now)
     deleted = Column(Boolean, default=False, index=True)
 
     class Config:
-        # 通过配置使其成为虚拟基类，不会映射到数据库
         from_attributes = True

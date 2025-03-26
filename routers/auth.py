@@ -130,8 +130,8 @@ async def login(
     summary="获取管理员信息",
     description="获取当前登录的管理员信息",
 )
-async def get_profile(admin_user: AdminUser = Depends(get_current_admin_user)):
-    return R.success(admin_user)
+async def get_profile(cuser: AdminUser = Depends(get_current_admin_user)):
+    return R.success(cuser)
 
 
 class UpdateProfileForm(BaseModel):
@@ -145,13 +145,13 @@ class UpdateProfileForm(BaseModel):
 )
 async def update_profile(
     req_form: UpdateProfileForm,
-    admin_user: AdminUser = Depends(get_current_admin_user),
+    cuser: AdminUser = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    admin_user.email = req_form.email
-    admin_user.phone = req_form.phone
-    admin_user.name = req_form.name
-    return R.success(admin_user)
+    cuser.email = req_form.email
+    cuser.phone = req_form.phone
+    cuser.name = req_form.name
+    return R.success(cuser)
 
 
 @router.put("/logout", response_model=R[None], summary="管理员登出", description="管理员登出，清除登录状态")
@@ -182,7 +182,7 @@ class UpdatePasswordForm(BaseModel):
 async def update_password(
     req_form: UpdatePasswordForm,
     request: Request,
-    admin_user: AdminUser = Depends(get_current_admin_user),
+    cuser: AdminUser = Depends(get_current_admin_user),
     redis: aioredis.Redis = Depends(get_redis),
 ):
     captcha_id = req_form.captcha_id or request.cookies.get("update_password_captcha_id")
@@ -190,6 +190,6 @@ async def update_password(
         captcha = await conn.getdel(f"update_password_captcha.{captcha_id}")
         if not captcha or captcha.lower() != req_form.captcha.lower():
             raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
-    admin_user.salt = random_str(13)
-    admin_user.password = AdminUser.encrypt_password(req_form.password, admin_user.salt, admin_user.ptype)
+    cuser.salt = random_str(13)
+    cuser.password = AdminUser.encrypt_password(req_form.password, cuser.salt, cuser.ptype)
     return R.success(None)

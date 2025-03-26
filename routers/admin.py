@@ -4,11 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ADMIN_USERNAME_PATTERN
 from dal.admin import AdminRepo
+from dal.system import SystemRepo
 from database.session import get_db
 from middlewares.depends import get_current_admin_user
 from models.admin import AdminUser, AdminUserStatus
 from routers.api import ApiErrors, ApiException
-from schemas.admin import AdminUserSchema
+from schemas.admin import AdminRoleSchema, AdminUserSchema
 from schemas.response import P, R
 from utils.string import random_str
 
@@ -17,7 +18,7 @@ router = APIRouter()
 
 @router.get("/user/{id}", response_model=R[AdminUserSchema], summary="获取用户详情", description="通过ID获取用户详情")
 async def get_admin_user(
-    id: int, db: AsyncSession = Depends(get_db), admin_user: AdminUser = Depends(get_current_admin_user)
+    id: int, db: AsyncSession = Depends(get_db), cuser: AdminUser = Depends(get_current_admin_user)
 ):
     user = await AdminRepo.get_admin_user(db, id)
     if not user:
@@ -32,7 +33,7 @@ async def find_admin_users(
     page: int = Query(default=1, min=1),
     page_size: int = Query(default=10, min=1, max=100),
     db: AsyncSession = Depends(get_db),
-    admin_user: AdminUser = Depends(get_current_admin_user),
+    cuser: AdminUser = Depends(get_current_admin_user),
 ):
     admin_users, total_count = await AdminRepo.find_admin_users(db, query, status, page, page_size)
     return R.success(P.from_list(total_count, page, page_size, admin_users))
@@ -96,3 +97,64 @@ async def update_admin_user(
         admin_user.password = AdminUser.encrypt_password(req_form.password, admin_user.salt, admin_user.ptype)
     await db.flush()
     return R.success(admin_user)
+
+
+class CreateAdminRoleForm(BaseModel):
+    name: str = Field(min_length=1, max_length=64, description="角色名称")
+    remark: str = Field(default="", description="备注")
+    permission_ids: list[int] = Field(default=[], description="权限ID列表")
+
+
+@router.post("/role", response_model=R[AdminRoleSchema], summary="创建角色", description="创建角色")
+async def create_admin_role(
+    req_form: CreateAdminRoleForm,
+    db: AsyncSession = Depends(get_db),
+    cuser: AdminUser = Depends(get_current_admin_user),
+):
+    for permission_id in req_form.permission_ids:
+        permission = await SystemRepo.get_permission(db, permission_id)
+        if not permission:
+            raise ApiException(ApiErrors.PERMISSION_NOT_FOUND)
+    admin_role = await AdminRepo.create_admin_role(
+        db, req_form.name, req_form.remark, req_form.permission_ids, created_by=cuser.id
+    )
+    return R.success(admin_role)
+
+
+class UpdateAdminRoleForm(BaseModel):
+    name: str = Field(min_length=1, max_length=64, description="角色名称")
+    remark: str = Field(default="", description="备注")
+    permission_ids: list[int] = Field(default=[], description="权限ID列表")
+
+
+@router.put("/role/{id}", response_model=R[AdminRoleSchema], summary="更新角色", description="更新角色")
+async def update_admin_role(
+    id: int,
+    req_form: UpdateAdminRoleForm,
+    db: AsyncSession = Depends(get_db),
+    cuser: AdminUser = Depends(get_current_admin_user),
+):
+    admin_role = await AdminRepo.get_admin_role(db, id)
+    if not admin_role:
+        raise ApiException(ApiErrors.ADMIN_ROLE_NOT_FOUND)
+    for permission_id in req_form.permission_ids:
+        permission = await SystemRepo.get_permission(db, permission_id)
+        if not permission:
+            raise ApiException(ApiErrors.PERMISSION_NOT_FOUND)
+    admin_role.name = req_form.name
+    admin_role.remark = req_form.remark
+    admin_role.permission_ids = req_form.permission_ids
+    await db.flush()
+    return R.success(admin_role)
+
+
+@router.get("/roles", response_model=R[P[AdminRoleSchema]], summary="获取角色列表", description="获取角色列表")
+async def find_admin_roles(
+    query: str = Query(default=""),
+    page: int = Query(default=1, min=1),
+    page_size: int = Query(default=10, min=1, max=100),
+    db: AsyncSession = Depends(get_db),
+    cuser: AdminUser = Depends(get_current_admin_user),
+):
+    admin_roles, total_count = await AdminRepo.find_admin_roles(db, query, page, page_size)
+    return R.success(P.from_list(total_count, page, page_size, admin_roles))

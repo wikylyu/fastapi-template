@@ -31,3 +31,10 @@ class AdminUserTokenSchema(BaseSchema):
     expired_at: datetime
     ip: str
     user_agent: str
+
+
+class AdminRoleSchema(BaseSchema):
+    id: int
+    name: str
+    remark: str
+    permission_ids: list[int]

@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus, PasswordType
+from models.admin import AdminRole, AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus, PasswordType
 from utils.string import random_str
 
 
@@ -110,3 +110,34 @@ class AdminRepo:
         total_count = r_count.scalar()
 
         return (admin_users, total_count)
+
+    @classmethod
+    async def get_admin_role(cls, db: AsyncSession, id: int) -> AdminRole | None:
+        r = await db.execute(select(AdminRole).where(AdminRole.id == id))
+        return r.scalars().first()
+
+    @classmethod
+    async def create_admin_role(
+        cls, db: AsyncSession, name: str, remark: str, permission_ids: list[int], created_by: int
+    ):
+        role = AdminRole(name=name, remark=remark, permission_ids=permission_ids, created_by=created_by)
+        db.add(role)
+        await db.flush()
+        return role
+
+    @classmethod
+    async def find_admin_roles(cls, db: AsyncSession, query: str = "", page: int = 1, page_size: int = 10):
+        base_query = select(AdminRole).order_by(AdminRole.created_at.desc())
+        if query:
+            base_query = base_query.where(AdminRole.name.contains(query))
+        # 分页查询
+        paginated_query = base_query.limit(page_size).offset((page - 1) * page_size)
+        r = await db.execute(paginated_query)
+        admin_roles = r.scalars().all()
+
+        # 总数查询
+        count_query = select(func.count()).select_from(base_query.subquery())
+        r_count = await db.execute(count_query)
+        total_count = r_count.scalar()
+
+        return (admin_roles, total_count)

@@ -30,5 +30,5 @@ class Api(BaseTable):
 
     __table_args__ = (  # 设置method和path的联合unique
         UniqueConstraint("method", "path", name="method_path_unique"),
-        Index("idx_permission_ids_gin", "permission_ids", postgresql_using="gin"),
+        Index("idx_api__permission_ids_gin", "permission_ids", postgresql_using="gin"),
     )

@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 
 from models.base import BaseTable
@@ -83,3 +84,19 @@ class AdminUserToken(BaseTable):
 
     def is_expired(self) -> bool:
         return self.expired_at and self.expired_at < datetime.now()
+
+
+class AdminRole(BaseTable):
+    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    name: str = Column(String(64), nullable=False)
+    remark: str = Column(String(256), nullable=False)
+    permission_ids = Column(ARRAY(Integer), nullable=False, default=[])
+    created_by: int = Column(
+        Integer,
+        nullable=False,
+        index=True,
+    )
+
+    __table_args__ = (  # 设置method和path的联合unique
+        Index("idx_admin_role__permission_ids_gin", "permission_ids", postgresql_using="gin"),
+    )

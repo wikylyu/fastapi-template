@@ -61,7 +61,7 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(system.router, prefix="/system", tags=["System"])
 
 
-@app.get("/config", response_model=R[ConfigSchema], summary="获取管理配置", description="获取系统配置")
+@app.get("/config", response_model=R[ConfigSchema], summary="获取系统配置", description="获取系统配置")
 async def get_config(db: AsyncSession = Depends(get_db)):
     cfg = {
         "appname": APPNAME,
