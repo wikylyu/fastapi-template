@@ -2,12 +2,26 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import APPNAME, APPVERSION, CORS_ALLOW_ORIGIN, DATABASE_AUTO_UPGRADE, DEBUG, ROOT_PATH
+from config import (
+    ADMIN_USERNAME_PATTERN,
+    APPNAME,
+    APPVERSION,
+    COPYRIGHT,
+    CORS_ALLOW_ORIGIN,
+    DATABASE_AUTO_UPGRADE,
+    DEBUG,
+    ROOT_PATH,
+)
+from dal.admin import AdminRepo
+from database.session import get_db
 from middlewares.exception import ApiExceptionHandlingMiddleware
-from routers import admin, system
+from routers import admin, auth, system
+from schemas.base import ConfigSchema
+from schemas.response import R
 
 
 async def run_db_upgrade():
@@ -42,6 +56,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(system.router, prefix="/system", tags=["System"])
+
+
+@app.get("/config", response_model=R[ConfigSchema], summary="获取管理配置", description="获取系统配置")
+async def get_config(db: AsyncSession = Depends(get_db)):
+    cfg = {
+        "appname": APPNAME,
+        "copyright": COPYRIGHT,
+        "version": APPVERSION,
+        "admin_username_pattern": ADMIN_USERNAME_PATTERN,
+    }
+    cfg["onboarding"] = not await AdminRepo.check_super_admin_user_exists(
+        db
+    )  # onboarding表示是否存在超级管理员，不存在则可以创建
+    return R.success(cfg)

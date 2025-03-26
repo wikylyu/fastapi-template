@@ -26,7 +26,7 @@ async def get_auth_token(
         return None
 
 
-async def get_current_admin_user_token(
+async def try_current_admin_user_token(
     token: str | None = Depends(get_auth_token),
     db: AsyncSession = Depends(get_db),
 ) -> AdminUserToken | None:
@@ -43,7 +43,7 @@ async def get_current_admin_user_token(
 
 
 async def try_current_admin_user(
-    admin_user_token: AdminUserToken | None = Depends(get_current_admin_user_token),
+    admin_user_token: AdminUserToken | None = Depends(try_current_admin_user_token),
 ) -> AdminUser | None:
     if not admin_user_token:
         return None
