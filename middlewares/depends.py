@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal.admin import AdminRepo
 from database.session import get_db
-from models.admin import AdminUser, AdminUserToken, AdminUserTokenStatus
+from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
 from services.encrypt import encrypt_service
 
 
@@ -47,7 +47,10 @@ async def try_current_admin_user(
 ) -> AdminUser | None:
     if not admin_user_token:
         return None
-    return admin_user_token.admin_user
+    admin_user = admin_user_token.admin_user
+    if admin_user and admin_user.status != AdminUserStatus.ACTIVE.value:
+        return None
+    return admin_user
 
 
 async def get_current_admin_user(
