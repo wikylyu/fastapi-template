@@ -47,6 +47,8 @@ class CreateAdminUserForm(BaseModel):
     phone: str = Field(max_length=32)
     status: AdminUserStatus = Field(default=AdminUserStatus.ACTIVE, description="用户状态")
 
+    role_ids: list[int] = Field(default=[], description="角色ID列表")
+
 
 @router.post("/user", response_model=R[AdminUserSchema], summary="创建用户", description="创建用户")
 async def create_admin_user(
@@ -67,6 +69,11 @@ async def create_admin_user(
         phone=req_form.phone,
         created_by=cuser.id,
     )
+    for role_id in req_form.role_ids:
+        role = await AdminRepo.get_admin_role(db, role_id)  # 检查角色是否存在
+        if not role:
+            raise ApiException(ApiErrors.ADMIN_ROLE_NOT_FOUND)
+        await AdminRepo.create_admin_user_role(db, admin_user.id, role.id)
     return R.success(admin_user)
 
 
@@ -76,6 +83,8 @@ class UpdateAdminUserForm(BaseModel):
     phone: str = Field(max_length=32)
     password: str = Field(default="", description="如何有密码，则重置密码，否则忽略")
     status: AdminUserStatus = Field(default=AdminUserStatus.ACTIVE, description="用户状态")
+
+    role_ids: list[int] = Field(default=[], description="角色ID列表")
 
 
 @router.put("/user/{id}", response_model=R[AdminUserSchema], summary="更新用户", description="更新用户")
@@ -95,8 +104,28 @@ async def update_admin_user(
     if req_form.password:
         admin_user.salt = random_str(12)
         admin_user.password = AdminUser.encrypt_password(req_form.password, admin_user.salt, admin_user.ptype)
-    await db.flush()
+
+    await AdminRepo.delete_admin_user_role_by_user_id(db, admin_user.id)
+    for role_id in req_form.role_ids:
+        role = await AdminRepo.get_admin_role(db, role_id)  # 检查角色是否存在
+        if not role:
+            raise ApiException(ApiErrors.ADMIN_ROLE_NOT_FOUND)
+        await AdminRepo.create_admin_user_role(db, admin_user.id, role.id)
+
     return R.success(admin_user)
+
+
+@router.get(
+    "/user/{id}/roles",
+    response_model=R[list[AdminRoleSchema]],
+    summary="获取用户角色列表",
+    description="获取用户角色列表",
+)
+async def find_admin_user_roles(
+    id: int, db: AsyncSession = Depends(get_db), cuser: AdminUser = Depends(get_current_admin_user)
+):
+    roles = await AdminRepo.find_admin_user_roles(db, id)
+    return R.success(roles)
 
 
 class CreateAdminRoleForm(BaseModel):
@@ -158,3 +187,13 @@ async def find_admin_roles(
 ):
     admin_roles, total_count = await AdminRepo.find_admin_roles(db, query, page, page_size)
     return R.success(P.from_list(total_count, page, page_size, admin_roles))
+
+
+@router.get("/role/{id}", response_model=R[AdminRoleSchema], summary="获取角色详情", description="通过ID获取角色详情")
+async def get_admin_role(
+    id: int, db: AsyncSession = Depends(get_db), cuser: AdminUser = Depends(get_current_admin_user)
+):
+    role = await AdminRepo.get_admin_role(db, id)
+    if not role:
+        raise ApiException(ApiErrors.ADMIN_ROLE_NOT_FOUND)
+    return R.success(role)

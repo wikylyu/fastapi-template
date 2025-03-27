@@ -1,11 +1,19 @@
 import random
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from models.admin import AdminRole, AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus, PasswordType
+from models.admin import (
+    AdminRole,
+    AdminUser,
+    AdminUserRole,
+    AdminUserStatus,
+    AdminUserToken,
+    AdminUserTokenStatus,
+    PasswordType,
+)
 from utils.string import random_str
 
 
@@ -141,3 +149,24 @@ class AdminRepo:
         total_count = r_count.scalar()
 
         return (admin_roles, total_count)
+
+    @classmethod
+    async def create_admin_user_role(cls, db: AsyncSession, admin_user_id: int, admin_role_id: int) -> AdminUserRole:
+        admin_user_role = AdminUserRole(admin_user_id=admin_user_id, admin_role_id=admin_role_id)
+        db.add(admin_user_role)
+        await db.flush()
+        return admin_user_role
+
+    @classmethod
+    async def delete_admin_user_role_by_user_id(cls, db: AsyncSession, admin_user_id: int):
+        await db.execute(delete(AdminUserRole).where(AdminUserRole.admin_user_id == admin_user_id))
+
+    @classmethod
+    async def find_admin_user_roles(cls, db: AsyncSession, admin_user_id: int) -> list[AdminRole]:
+        r = await db.execute(
+            select(AdminRole)
+            .join(AdminUserRole, AdminUserRole.admin_role_id == AdminRole.id)
+            .where(AdminUserRole.admin_user_id == admin_user_id)
+            .order_by(AdminUserRole.created_at.asc())
+        )
+        return r.scalars().all()

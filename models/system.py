@@ -29,6 +29,6 @@ class Api(BaseTable):
     created_by = Column(Integer, nullable=False, index=True)
 
     __table_args__ = (  # 设置method和path的联合unique
-        UniqueConstraint("method", "path", name="method_path_unique"),
+        UniqueConstraint("method", "path", name="api__method_path_unique"),
         Index("idx_api__permission_ids_gin", "permission_ids", postgresql_using="gin"),
     )

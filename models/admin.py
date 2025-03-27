@@ -4,6 +4,7 @@ from enum import Enum
 from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
+from sqlalchemy.schema import UniqueConstraint
 
 from models.base import BaseTable
 from utils.password import encrypt_password_md5, encrypt_password_sha256, encrypt_password_sha512
@@ -99,4 +100,14 @@ class AdminRole(BaseTable):
 
     __table_args__ = (  # 设置method和path的联合unique
         Index("idx_admin_role__permission_ids_gin", "permission_ids", postgresql_using="gin"),
+    )
+
+
+class AdminUserRole(BaseTable):
+    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    admin_user_id: int = Column(Integer, nullable=False, index=True)
+    admin_role_id: int = Column(Integer, nullable=False, index=True)
+
+    __table_args__ = (  # 设置method和path的联合unique
+        UniqueConstraint("admin_user_id", "admin_role_id", name="admin_user_role__admin_user_id_admin_role_id_unique"),
     )
