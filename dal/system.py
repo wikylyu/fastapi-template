@@ -68,6 +68,18 @@ class SystemRepo:
         return r.scalars().first()
 
     @classmethod
+    async def get_permission_by_fullcode(cls, db: AsyncSession, code: str) -> Permission | None:
+        codes = code.split(".")
+        parent_id = 0
+        permission = None
+        for code in codes:
+            permission = await cls.get_permission_by_code_and_parent(db, code, parent_id)
+            if not permission:
+                return None
+            parent_id = permission.id
+        return permission
+
+    @classmethod
     async def get_permission_by_code_and_parent(cls, db: AsyncSession, code: str, parent_id: int) -> Permission | None:
         r = await db.execute(select(Permission).where(Permission.code == code, Permission.parent_id == parent_id))
         return r.scalars().first()

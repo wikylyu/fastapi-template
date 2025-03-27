@@ -170,3 +170,16 @@ class AdminRepo:
             .order_by(AdminUserRole.created_at.asc())
         )
         return r.scalars().all()
+
+    @classmethod
+    async def check_admin_user_permission(cls, db: AsyncSession, admin_user_id: int, permission_id: int) -> bool:
+        """判断用户是否拥有权限"""
+        r = await db.execute(
+            select(AdminRole)
+            .join(AdminUserRole, AdminUserRole.admin_role_id == AdminRole.id)
+            .where(
+                AdminUserRole.admin_user_id == admin_user_id,
+            )
+            .where(AdminRole.permission_ids.contains([permission_id]))
+        )
+        return bool(r.scalars().first())

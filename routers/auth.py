@@ -2,13 +2,14 @@ import random
 from datetime import datetime, timedelta, timezone
 
 from captcha.image import ImageCaptcha
-from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, Field
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ADMIN_USERNAME_PATTERN
 from dal.admin import AdminRepo
+from dal.system import SystemRepo
 from database.redis import get_redis
 from database.session import get_db
 from middlewares.depends import get_client_real_ip, get_current_admin_user, try_current_admin_user_token
@@ -193,3 +194,27 @@ async def update_password(
     cuser.salt = random_str(13)
     cuser.password = AdminUser.encrypt_password(req_form.password, cuser.salt, cuser.ptype)
     return R.success(None)
+
+
+@router.get(
+    "/permissions",
+    response_model=R[dict[str, bool]],
+    summary="查找权限",
+    description="判断当前用户是否有权限",
+)
+async def check_permissions(
+    codes: list[str] = Query(min_length=1, description="权限代码"),
+    cuser: AdminUser = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    m: dict[str, bool] = {}
+    for code in codes:
+        if cuser.is_superuser:
+            m[code] = True
+            continue
+        permission = await SystemRepo.get_permission_by_fullcode(db, code)
+        if permission and await AdminRepo.check_admin_user_permission(db, cuser.id, permission.id):
+            m[code] = True
+        else:
+            m[code] = False
+    return R.success(m)
