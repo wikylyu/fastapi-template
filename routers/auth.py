@@ -203,13 +203,13 @@ async def update_password(
     description="判断当前用户是否有权限",
 )
 async def check_permissions(
-    codes: list[str] = Query(min_length=1, description="权限代码"),
+    codes: list[str] = Query(min_length=1, description="完整权限代码，诸如 admin.user.create"),
     cuser: AdminUser = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     m: dict[str, bool] = {}
     for code in codes:
-        if cuser.is_superuser:
+        if cuser.is_superuser:  # 超级管理员拥有所有权限
             m[code] = True
             continue
         permission = await SystemRepo.get_permission_by_fullcode(db, code)

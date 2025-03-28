@@ -172,14 +172,16 @@ class AdminRepo:
         return r.scalars().all()
 
     @classmethod
-    async def check_admin_user_permission(cls, db: AsyncSession, admin_user_id: int, permission_id: int) -> bool:
+    async def check_admin_user_permission(cls, db: AsyncSession, admin_user_id: int, *permission_ids: int) -> bool:
         """判断用户是否拥有权限"""
+        if not permission_ids:
+            return True
         r = await db.execute(
             select(AdminRole)
             .join(AdminUserRole, AdminUserRole.admin_role_id == AdminRole.id)
             .where(
                 AdminUserRole.admin_user_id == admin_user_id,
             )
-            .where(AdminRole.permission_ids.contains([permission_id]))
+            .where(AdminRole.permission_ids.overlap(permission_ids))
         )
         return bool(r.scalars().first())

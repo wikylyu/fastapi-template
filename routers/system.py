@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal.system import SystemRepo
 from database.session import get_db
-from middlewares.depends import get_current_super_admin_user
+from middlewares.depends import get_current_admin_user, get_current_super_admin_user
 from models.admin import AdminUser
 from routers.api import ApiErrors, ApiException
 from schemas.response import P, R
@@ -222,7 +222,7 @@ async def update_permission(
 @router.get("/permissions", response_model=R[list[PermissionSchema]], summary="查找权限", description="查找权限")
 async def find_permissions(
     db: AsyncSession = Depends(get_db),
-    cuser: AdminUser = Depends(get_current_super_admin_user),
+    cuser: AdminUser = Depends(get_current_admin_user),
 ):
     permissions = await SystemRepo.find_chilren_permissions_by_parent_r(db, parent_id=0)
     return R.success(permissions)
@@ -262,7 +262,7 @@ async def update_permission_sort(
 async def find_permission(
     id: int,
     db: AsyncSession = Depends(get_db),
-    cuser: AdminUser = Depends(get_current_super_admin_user),
+    cuser: AdminUser = Depends(get_current_admin_user),
 ):
     permissions = []
     while id > 0:
