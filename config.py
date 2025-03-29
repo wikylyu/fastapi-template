@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # App
 APPNAME = os.getenv("APPNAME", "FastAPI 管理系统")
