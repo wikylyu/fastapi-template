@@ -109,5 +109,5 @@ class AdminUserRole(BaseTable):
     admin_role_id: int = Column(Integer, nullable=False, index=True)
 
     __table_args__ = (  # 设置method和path的联合unique
-        UniqueConstraint("admin_user_id", "admin_role_id", name="admin_user_role__admin_user_id_admin_role_id_unique"),
+        UniqueConstraint("admin_user_id", "admin_role_id"),
     )
