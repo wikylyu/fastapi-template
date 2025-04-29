@@ -1,10 +1,11 @@
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dal.base import BaseRepo
 from models.system import Api, Permission
 
 
-class SystemRepo:
+class SystemRepo(BaseRepo):
     @classmethod
     async def create_api(
         cls, db: AsyncSession, method: str, path: str, created_by: int = 0, permission_ids: list[int] = []
@@ -41,23 +42,13 @@ class SystemRepo:
     async def find_apis(
         cls, db: AsyncSession, method: str, path: str, page: int = 1, page_size: int = 10
     ) -> tuple[list[Api], int]:
-        base_query = select(Api).order_by(Api.created_at.desc())
+        q = select(Api).order_by(Api.created_at.desc())
         if method:
-            base_query = base_query.where(Api.method == method)
+            q = q.where(Api.method == method)
         if path:
-            base_query = base_query.where(Api.path == path)
+            q = q.where(Api.path == path)
 
-        # 分页查询
-        paginated_query = base_query.limit(page_size).offset((page - 1) * page_size)
-        r = await db.execute(paginated_query)
-        apis = r.scalars().all()
-
-        # 总数查询
-        count_query = select(func.count()).select_from(base_query.subquery())
-        r_count = await db.execute(count_query)
-        total_count = r_count.scalar()
-
-        return (apis, total_count)
+        return cls._query_pagination(db, q, page, page_size)
 
     @classmethod
     async def get_permission(cls, db: AsyncSession, id: int, with_for_update: bool = False) -> Permission | None:

@@ -1,10 +1,11 @@
 import random
 from datetime import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from dal.base import BaseRepo
 from models.admin import (
     AdminRole,
     AdminUser,
@@ -17,7 +18,7 @@ from models.admin import (
 from utils.string import random_str
 
 
-class AdminRepo:
+class AdminRepo(BaseRepo):
     @classmethod
     def random_ptype(cls) -> str:
         return random.choice([PasswordType.MD5.value, PasswordType.SHA256.value, PasswordType.SHA512.value])
@@ -102,22 +103,13 @@ class AdminRepo:
     async def find_admin_users(
         cls, db: AsyncSession, query: str = "", status: str = "", page: int = 1, page_size: int = 10
     ) -> tuple[list[AdminUser], int]:
-        base_query = select(AdminUser).order_by(AdminUser.created_at.desc())
+        q = select(AdminUser).order_by(AdminUser.created_at.desc())
         if query:
-            base_query = base_query.where((AdminUser.name.contains(query)) | (AdminUser.username.contains(query)))
+            q = q.where((AdminUser.name.contains(query)) | (AdminUser.username.contains(query)))
         if status:
-            base_query = base_query.where(AdminUser.status == status)
-        # 分页查询
-        paginated_query = base_query.limit(page_size).offset((page - 1) * page_size)
-        r = await db.execute(paginated_query)
-        admin_users = r.scalars().all()
+            q = q.where(AdminUser.status == status)
 
-        # 总数查询
-        count_query = select(func.count()).select_from(base_query.subquery())
-        r_count = await db.execute(count_query)
-        total_count = r_count.scalar()
-
-        return (admin_users, total_count)
+        return cls._query_pagination(db, q, page, page_size)
 
     @classmethod
     async def get_admin_role(cls, db: AsyncSession, id: int) -> AdminRole | None:
@@ -135,20 +127,11 @@ class AdminRepo:
 
     @classmethod
     async def find_admin_roles(cls, db: AsyncSession, query: str = "", page: int = 1, page_size: int = 10):
-        base_query = select(AdminRole).order_by(AdminRole.created_at.desc())
+        q = select(AdminRole).order_by(AdminRole.created_at.desc())
         if query:
-            base_query = base_query.where(AdminRole.name.contains(query))
-        # 分页查询
-        paginated_query = base_query.limit(page_size).offset((page - 1) * page_size)
-        r = await db.execute(paginated_query)
-        admin_roles = r.scalars().all()
+            q = q.where(AdminRole.name.contains(query))
 
-        # 总数查询
-        count_query = select(func.count()).select_from(base_query.subquery())
-        r_count = await db.execute(count_query)
-        total_count = r_count.scalar()
-
-        return (admin_roles, total_count)
+        return cls._query_pagination(db, q, page, page_size)
 
     @classmethod
     async def create_admin_user_role(cls, db: AsyncSession, admin_user_id: int, admin_role_id: int) -> AdminUserRole:
