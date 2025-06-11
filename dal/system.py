@@ -48,7 +48,7 @@ class SystemRepo(BaseRepo):
         if path:
             q = q.where(Api.path == path)
 
-        return cls._query_pagination(db, q, page, page_size)
+        return await cls._query_pagination(db, q, page, page_size)
 
     @classmethod
     async def get_permission(cls, db: AsyncSession, id: int, with_for_update: bool = False) -> Permission | None:

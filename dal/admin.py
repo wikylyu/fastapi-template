@@ -109,7 +109,7 @@ class AdminRepo(BaseRepo):
         if status:
             q = q.where(AdminUser.status == status)
 
-        return cls._query_pagination(db, q, page, page_size)
+        return await cls._query_pagination(db, q, page, page_size)
 
     @classmethod
     async def get_admin_role(cls, db: AsyncSession, id: int) -> AdminRole | None:
@@ -131,7 +131,7 @@ class AdminRepo(BaseRepo):
         if query:
             q = q.where(AdminRole.name.contains(query))
 
-        return cls._query_pagination(db, q, page, page_size)
+        return await cls._query_pagination(db, q, page, page_size)
 
     @classmethod
     async def create_admin_user_role(cls, db: AsyncSession, admin_user_id: int, admin_role_id: int) -> AdminUserRole:

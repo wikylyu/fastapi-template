@@ -2,7 +2,7 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +14,6 @@ from config import (
     CORS_ALLOW_ORIGIN,
     DATABASE_AUTO_UPGRADE,
     DEBUG,
-    ROOT_PATH,
 )
 from dal.admin import AdminRepo
 from database.session import get_db
@@ -46,7 +45,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title=APPNAME, version=APPVERSION, lifespan=lifespan, root_path=ROOT_PATH, debug=DEBUG)
+app = FastAPI(title=APPNAME, version=APPVERSION, lifespan=lifespan, debug=DEBUG)
 
 app.add_middleware(ApiExceptionHandlingMiddleware)
 app.add_middleware(
@@ -56,12 +55,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-app.include_router(admin.router, prefix="/admin", tags=["Admin"])
-app.include_router(system.router, prefix="/system", tags=["System"])
+admin_router = APIRouter()
+admin_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
+admin_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
+admin_router.include_router(system.router, prefix="/system", tags=["System"])
 
 
-@app.get("/config", response_model=R[ConfigSchema], summary="获取系统配置", description="获取系统配置")
+@admin_router.get("/config", response_model=R[ConfigSchema], summary="获取系统配置", description="获取系统配置")
 async def get_config(db: AsyncSession = Depends(get_db)):
     cfg = {
         "appname": APPNAME,
@@ -73,3 +73,6 @@ async def get_config(db: AsyncSession = Depends(get_db)):
         db
     )  # onboarding表示是否存在超级管理员，不存在则可以创建
     return R.success(cfg)
+
+
+app.include_router(admin_router, prefix="/adminapi", tags=["Admin API"])
