@@ -75,4 +75,4 @@ async def get_config(db: AsyncSession = Depends(get_db)):
     return R.success(cfg)
 
 
-app.include_router(admin_router, prefix="/adminapi", tags=["Admin API"])
+app.include_router(admin_router, prefix="/adminapi")

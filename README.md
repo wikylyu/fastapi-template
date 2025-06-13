@@ -88,8 +88,8 @@ fastapi dev
 
 服务启动后可访问：
 
-- API 文档：http://localhost:8000/api/docs
-- ReDoc 文档：http://localhost:8000/api/redoc
+- API 文档：http://localhost:8000/docs
+- ReDoc 文档：http://localhost:8000/redoc
 
 ## License
 
