@@ -10,12 +10,3 @@ class BaseSchema(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class ConfigSchema(BaseModel):
-    onboarding: bool
-    version: str
-    appname: str
-    copyright: str
-
-    admin_username_pattern: str

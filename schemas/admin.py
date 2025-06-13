@@ -38,3 +38,12 @@ class AdminRoleSchema(BaseSchema):
     name: str
     remark: str
     permission_ids: list[int]
+
+
+class ConfigSchema(BaseModel):
+    onboarding: bool
+    version: str
+    appname: str
+    copyright: str
+
+    admin_username_pattern: str
