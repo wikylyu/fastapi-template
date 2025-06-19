@@ -41,13 +41,17 @@ def upgrade() -> None:
 
     # 插入 t_api 表数据
     apis = [
-        Api(id=1, method="GET", path="/admin/users", permission_ids=[3, 4, 5], created_by=1, deleted=False),
-        Api(id=2, method="GET", path="/admin/role/{id}", permission_ids=[3, 4, 5], created_by=1, deleted=False),
-        Api(id=3, method="POST", path="/admin/user", permission_ids=[4], created_by=1, deleted=False),
-        Api(id=4, method="PUT", path="/admin/user/{id}", permission_ids=[5], created_by=1, deleted=False),
-        Api(id=6, method="GET", path="/system/permissions", permission_ids=[8, 9], created_by=1, deleted=False),
-        Api(id=7, method="POST", path="/admin/role", permission_ids=[8], created_by=1, deleted=False),
-        Api(id=8, method="PUT", path="/admin/role/{id}", permission_ids=[9], created_by=1, deleted=False),
+        Api(id=1, method="GET", path="/adminapi/admin/users", permission_ids=[3, 4, 5], created_by=1, deleted=False),
+        Api(
+            id=2, method="GET", path="/adminapi/admin/role/{id}", permission_ids=[3, 4, 5], created_by=1, deleted=False
+        ),
+        Api(id=3, method="POST", path="/adminapi/admin/user", permission_ids=[4], created_by=1, deleted=False),
+        Api(id=4, method="PUT", path="/adminapi/admin/user/{id}", permission_ids=[5], created_by=1, deleted=False),
+        Api(
+            id=6, method="GET", path="/adminapi/system/permissions", permission_ids=[8, 9], created_by=1, deleted=False
+        ),
+        Api(id=7, method="POST", path="/adminapi/admin/role", permission_ids=[8], created_by=1, deleted=False),
+        Api(id=8, method="PUT", path="/adminapi/admin/role/{id}", permission_ids=[9], created_by=1, deleted=False),
     ]
     session.add_all(apis)
     session.flush()  # 提交 api 数据

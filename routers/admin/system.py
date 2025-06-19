@@ -23,6 +23,8 @@ async def find_routes(
     app = request.app
     routes = []
     for route in app.routes:
+        if not route.path.startswith("/adminapi/"):
+            continue
         if path and not route.path.startswith(path):
             continue
         for route_method in route.methods:
