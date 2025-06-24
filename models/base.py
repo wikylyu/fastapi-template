@@ -21,8 +21,8 @@ class BaseTable(Base):
 
     __abstract__ = True  # 定义为抽象基类
     __allow_unmapped__ = True
-    created_at = Column(DateTime, default=func.now(), index=True)
-    updated_at = Column(DateTime, default=func.now(), onupdate=datetime.now)
+    created_at = Column(DateTime(timezone=True), default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=datetime.now)
     deleted = Column(Boolean, default=False, index=True)
 
     class Config:

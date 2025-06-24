@@ -75,7 +75,7 @@ class AdminUserToken(BaseTable):
     id: str = Column(String, primary_key=True, default=uuidv4)
     admin_user_id: int = Column(Integer, index=True, nullable=False)
     status: str = Column(String(32), index=True, nullable=False, default=AdminUserTokenStatus.ACTIVE.value)
-    expired_at: datetime | None = Column(DateTime, nullable=True)
+    expired_at: datetime | None = Column(DateTime(timezone=True), nullable=True)
     ip: str = Column(String(128), nullable=False, default="")
     user_agent: str = Column(String(512), nullable=False, default="")
 
