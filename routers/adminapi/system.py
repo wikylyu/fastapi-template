@@ -6,9 +6,9 @@ from dal.system import SystemRepo
 from database.session import get_db
 from middlewares.depends import get_current_admin_user, get_current_super_admin_user
 from models.admin import AdminUser
+from routers.adminapi.schemas.system import ApiSchema, PermissionSchema, RouteSchema
 from routers.api import ApiErrors, ApiException
-from schemas.response import P, R
-from schemas.system import ApiSchema, PermissionSchema, RouteSchema
+from routers.response import P, R
 
 router = APIRouter()
 

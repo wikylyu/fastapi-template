@@ -8,9 +8,9 @@ from dal.system import SystemRepo
 from database.session import get_db
 from middlewares.depends import get_current_admin_user
 from models.admin import AdminUser, AdminUserStatus
+from routers.adminapi.schemas.admin import AdminRoleSchema, AdminUserSchema
 from routers.api import ApiErrors, ApiException
-from schemas.admin import AdminRoleSchema, AdminUserSchema
-from schemas.response import P, R
+from routers.response import P, R
 from utils.string import random_str
 
 router = APIRouter()

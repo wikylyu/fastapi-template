@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import ADMIN_USERNAME_PATTERN, APPNAME, APPVERSION, COPYRIGHT
 from dal.admin import AdminRepo
 from database.session import get_db
-from schemas.admin import ConfigSchema
-from schemas.response import R
+from routers.adminapi.schemas.admin import ConfigSchema
+from routers.response import R
 
 from . import admin, auth, system
 

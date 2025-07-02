@@ -14,10 +14,10 @@ from database.redis import get_redis
 from database.session import get_db
 from middlewares.depends import get_client_real_ip, get_current_admin_user, try_current_admin_user_token
 from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
+from routers.adminapi.schemas.admin import AdminUserSchema, AdminUserTokenSchema
 from routers.api import ApiErrors, ApiException
-from schemas.admin import AdminUserSchema, AdminUserTokenSchema
-from schemas.response import R
-from services.encrypt import encrypt_service
+from routers.response import R
+from services.encrypt import EncryptService, get_encrypt_service
 from utils.string import random_str
 from utils.uuid import uuidv4
 
@@ -95,6 +95,7 @@ async def login(
     ip: str = Depends(get_client_real_ip),
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
+    encrypt_service: EncryptService = Depends(get_encrypt_service),
 ):
     captcha_id = req_form.captcha_id or request.cookies.get("login_captcha_id")
     if not captcha_id:

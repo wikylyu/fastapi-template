@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from schemas.base import BaseSchema
+from routers.adminapi.schemas.base import BaseSchema
 
 
 class AdminConfigSchema(BaseModel):

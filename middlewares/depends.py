@@ -8,7 +8,7 @@ from dal.admin import AdminRepo
 from dal.system import SystemRepo
 from database.session import get_db
 from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
-from services.encrypt import encrypt_service
+from services.encrypt import EncryptService, get_encrypt_service
 
 
 @lru_cache()
@@ -29,7 +29,9 @@ def get_current_route(request: Request) -> dict[str, str]:
 
 
 async def get_auth_token(
-    admin_user_token: str | None = Cookie(default=None), authorization: str | None = Header(default=None)
+    admin_user_token: str | None = Cookie(default=None),
+    authorization: str | None = Header(default=None),
+    encrypt_service: EncryptService = Depends(get_encrypt_service),
 ) -> str | None:
     """从Cookie或Header中获取token"""
     token = None

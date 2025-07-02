@@ -5,7 +5,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from routers.api import ApiException
-from schemas.response import R
+from routers.response import R
 
 
 class ApiExceptionHandlingMiddleware(BaseHTTPMiddleware):
