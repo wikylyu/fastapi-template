@@ -10,8 +10,8 @@ from routers.response import R
 from . import admin, auth, system
 
 router = APIRouter()
-router.include_router(auth.router, prefix="/auth", tags=["Auth"])
-router.include_router(admin.router, prefix="/admin", tags=["Admin"])
+router.include_router(auth.router, prefix="/auth", tags=["Admin Auth"])
+router.include_router(admin.router, prefix="/admin", tags=["Admin User"])
 router.include_router(system.router, prefix="/system", tags=["System"])
 
 

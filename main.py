@@ -13,7 +13,7 @@ from config import (
     DEBUG,
 )
 from middlewares.exception import ApiExceptionHandlingMiddleware
-from routers import adminapi
+from routers import adminapi, userapi
 
 
 async def run_db_upgrade():
@@ -51,3 +51,4 @@ app.add_middleware(
 
 
 app.include_router(adminapi.router, prefix="/adminapi")
+app.include_router(userapi.router, prefix="/api")
