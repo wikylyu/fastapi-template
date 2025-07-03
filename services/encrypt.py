@@ -24,5 +24,5 @@ class EncryptService:
         return AES.new(self.key, AES.MODE_GCM, nonce=self.nonce)
 
 
-def get_encrypt_service():
+def get_encrypt_service() -> EncryptService:
     return EncryptService(SESSION_SECRET_KEY, SESSION_SECRET_NONCE)
