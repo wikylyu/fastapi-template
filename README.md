@@ -1,96 +1,41 @@
-# FastAPI-Template
+# FastAPI 管理系统
 
-这是一个基于 FastAPI 框架的后端项目模板，集成了常用的基础功能和最佳实践。
+FastAPI 管理系统是一个使用 Python 语言和 FastAPI 框架构建的后台管理系统。
 
-## 功能特点
+## 项目特点
 
-- 基于 FastAPI 框架
-- PostgreSQL 数据库支持
-- Redis 缓存支持
-- 用户认证和会话管理
-- 验证码支持
-- 自动数据库迁移（Alembic）
-- CORS 跨域支持
-- 环境变量配置
-- 模块化的项目结构
+- 使用 FastAPI 框架，提供了高性能的 API 服务
+- 使用 SQLAlchemy 作为 ORM 工具，支持多种数据库
+- 使用 Redis 作为缓存工具，提供了高效的缓存机制
+- 使用 Pydantic 作为数据模型工具，提供了强大的数据模型定义和验证功能
+- 使用 Alembic 作为数据库迁移工具，提供了便捷的数据库迁移功能
+- 使用 CAPTCHA 图形验证码，提供了防止机器人攻击的功能
 
 ## 项目结构
 
-```
-├── alembic/            # 数据库迁移相关文件
-├── dal/                # 数据访问层
-├── database/           # 数据库配置
-├── middlewares/        # 中间件
-├── models/            # 数据模型
-├── routers/           # API路由
-├── schemas/           # 数据验证模式
-├── services/          # 业务逻辑层
-├── utils/             # 工具函数
-├── alembic.ini        # Alembic配置文件
-├── config.py          # 项目配置
-├── create_db_migration.py  # 数据库迁移脚本
-├── main.py            # 应用入口
-└── requirements.txt   # 项目依赖
-```
+- `app` - FastAPI 项目主目录
+- `app/adminapi` - 管理 API router
+- `app/adminapi/auth.py` - 管理 API 认证路由
+- `app/adminapi/admin.py` - 管理 API 用户路由
+- `app/adminapi/system.py` - 管理 API 系统路由
+- `app/models` - 数据模型目录
+- `app/models/admin.py` - 管理用户模型
+- `app/models/system.py` - 系统模型
+- `app/routers` - 路由目录
+- `app/routers/adminapi` - 管理 API 路由
+- `app/routers/response.py` - 路由响应工具
+- `app/services` - 服务目录
+- `app/services/encrypt.py` - 加密服务
+- `app/utils` - 工具目录
+- `app/utils/password.py` - 密码工具
+- `app/utils/string.py` - 字符串工具
+- `app/utils/uuid.py` - UUID 工具
+- `config.py` - 配置文件
+- `requirements.txt` - 依赖项文件
 
-## 环境要求
+## 快速开始
 
-- Python 3.8+
-- PostgreSQL
-- Redis
-
-## 安装
-
-1. 克隆项目
-
-```bash
-git clone https://github.com/wikylyu/fastapi-template.git
-cd fastapi-template
-```
-
-2. 创建虚拟环境并安装依赖
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# 或 .venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-```
-
-3. 配置环境变量
-   可以通过环境变量(如添加修改.env 文件)或修改 `config.py` 文件来配置项目：
-
-- `APPNAME`: 应用名称
-- `DATABASE_URL`: PostgreSQL 数据库连接 URL
-- `REDIS_URL`: Redis 连接 URL
-- `ROOT_PATH`: API 根路径
-- `DEBUG`: 调试模式
-- 更多配置请参考 `config.py`
-
-## 数据库管理
-
-本项目使用 Alembic 进行数据库迁移管理。
-
-1. 创建新的迁移脚本：
-
-```bash
-python create_db_migration.py
-```
-
-2. 数据库更新：
-   默认情况下，程序启动时会自动完成数据库的更新。可以通过修改 `config.py` 文件或设置环境变量 `DATABASE_AUTO_UPGRADE` 来控制是否需要自动更新。
-
-## 启动服务
-
-```bash
-fastapi dev
-```
-
-服务启动后可访问：
-
-- API 文档：http://localhost:8000/docs
-- ReDoc 文档：http://localhost:8000/redoc
-
-## License
-
-MIT License
+1. 安装依赖项 `pip install -r requirements.txt`
+2. 创建数据库和表结构 `python create_db_migration.py`
+3. 启动 FastAPI 服务 `fastapi dev`
+4. 访问 FastAPI 服务 `http://localhost:8000/`
