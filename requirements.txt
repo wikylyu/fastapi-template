@@ -7,3 +7,4 @@ pycryptodome
 captcha
 redis
 python-dotenv
+colorama
