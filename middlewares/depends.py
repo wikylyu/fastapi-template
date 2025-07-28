@@ -2,11 +2,9 @@ from functools import lru_cache
 
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from fastapi.routing import APIRoute
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from dal.admin import AdminRepo
 from dal.system import SystemRepo
-from database.session import get_db
 from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
 from services.encrypt import EncryptService, get_encrypt_service
 
@@ -51,11 +49,11 @@ async def get_auth_token(
 
 async def try_current_admin_user_token(
     token: str | None = Depends(get_auth_token),
-    db: AsyncSession = Depends(get_db),
+    admin_repo: AdminRepo = Depends(AdminRepo.get),
 ) -> AdminUserToken | None:
     if not token:
         return None
-    admin_user_token = await AdminRepo.get_admin_user_token(db, token)
+    admin_user_token = await admin_repo.get_admin_user_token(token)
     if (
         not admin_user_token
         or admin_user_token.status != AdminUserTokenStatus.ACTIVE.value
@@ -79,16 +77,17 @@ async def try_current_admin_user(
 async def get_current_admin_user(
     admin_user: AdminUser | None = Depends(try_current_admin_user),
     route=Depends(get_current_route),
-    db: AsyncSession = Depends(get_db),
+    admin_repo: AdminRepo = Depends(AdminRepo.get),
+    system_repo: SystemRepo = Depends(SystemRepo.get),
 ) -> AdminUser:
     if not admin_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     if not admin_user.is_superuser:  # 不是超级管理员则检查权限
         method = route[0]
         path = route[1]
-        api = await SystemRepo.get_api_by_method_and_path(db, method, path)
+        api = await system_repo.get_api_by_method_and_path(method, path)
         if api:  # 只有存在该Api的时候才检查权限
-            is_granted = await AdminRepo.check_admin_user_permission(db, admin_user.id, *api.permission_ids)
+            is_granted = await admin_repo.check_admin_user_permission(admin_user.id, *api.permission_ids)
             if not is_granted:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return admin_user

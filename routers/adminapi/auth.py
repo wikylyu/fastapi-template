@@ -5,13 +5,11 @@ from captcha.image import ImageCaptcha
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, Field
 from redis import asyncio as aioredis
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ADMIN_USERNAME_PATTERN
 from dal.admin import AdminRepo
 from dal.system import SystemRepo
 from database.redis import get_redis
-from database.session import get_db
 from middlewares.depends import get_client_real_ip, get_current_admin_user, try_current_admin_user_token
 from models.admin import AdminUser, AdminUserStatus, AdminUserToken, AdminUserTokenStatus
 from routers.adminapi.schemas.admin import AdminUserSchema, AdminUserTokenSchema
@@ -36,11 +34,14 @@ class CreateSuperuserForm(BaseModel):
     summary="创建超级管理员",
     description="创建超级管理员，只有在不存在超级管理员的时候可以创建",
 )
-async def create_superuser(req_form: CreateSuperuserForm, db: AsyncSession = Depends(get_db)):
-    if await AdminRepo.check_super_admin_user_exists(db):
+async def create_superuser(
+    req_form: CreateSuperuserForm,
+    admin_repo: AdminRepo = Depends(AdminRepo.get),
+):
+    if await admin_repo.check_super_admin_user_exists():
         raise ApiException(ApiErrors.ADMIN_SUPERUSER_EXISTS)
-    admin_user = await AdminRepo.create_admin_user(
-        db, req_form.username, req_form.name, req_form.password, is_superuser=True
+    admin_user = await admin_repo.create_admin_user(
+        req_form.username, req_form.name, req_form.password, is_superuser=True
     )
     return R.success(admin_user)
 
@@ -93,9 +94,9 @@ async def login(
     response: Response,
     user_agent: str = Header(),
     ip: str = Depends(get_client_real_ip),
-    db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
     encrypt_service: EncryptService = Depends(get_encrypt_service),
+    admin_repo: AdminRepo = Depends(AdminRepo.get),
 ):
     captcha_id = req_form.captcha_id or request.cookies.get("login_captcha_id")
     if not captcha_id:
@@ -105,7 +106,7 @@ async def login(
         if not captcha or captcha.lower() != req_form.captcha.lower():
             raise ApiException(ApiErrors.ADMIN_CAPTCHA_INCORRECT)
 
-    admin_user = await AdminRepo.get_admin_user_by_username(db, req_form.username)
+    admin_user = await admin_repo.get_admin_user_by_username(req_form.username)
     if not admin_user:
         raise ApiException(ApiErrors.ADMIN_USER_NOT_FOUND)
     if admin_user.status != AdminUserStatus.ACTIVE.value:
@@ -114,8 +115,8 @@ async def login(
         raise ApiException(ApiErrors.ADMIN_USER_PASSWORD_INCORRECT)
 
     expired_at = datetime.now() + timedelta(days=7 if req_form.remember else 1)
-    admin_user_token = await AdminRepo.create_admin_user_token(
-        db, admin_user.id, expired_at=expired_at, ip=ip, user_agent=user_agent
+    admin_user_token = await admin_repo.create_admin_user_token(
+        admin_user.id, expired_at=expired_at, ip=ip, user_agent=user_agent
     )
 
     r = AdminUserTokenSchema.model_validate(admin_user_token)
@@ -148,7 +149,6 @@ class UpdateProfileForm(BaseModel):
 async def update_profile(
     req_form: UpdateProfileForm,
     cuser: AdminUser = Depends(get_current_admin_user),
-    db: AsyncSession = Depends(get_db),
 ):
     cuser.email = req_form.email
     cuser.phone = req_form.phone
@@ -206,15 +206,16 @@ async def update_password(
 async def check_permissions(
     codes: list[str] = Query(min_length=1, description="完整权限代码，诸如 admin.user.create"),
     cuser: AdminUser = Depends(get_current_admin_user),
-    db: AsyncSession = Depends(get_db),
+    system_repo: SystemRepo = Depends(SystemRepo.get),
+    admin_repo: AdminRepo = Depends(AdminRepo.get),
 ):
     m: dict[str, bool] = {}
     for code in codes:
         if cuser.is_superuser:  # 超级管理员拥有所有权限
             m[code] = True
             continue
-        permission = await SystemRepo.get_permission_by_fullcode(db, code)
-        if permission and await AdminRepo.check_admin_user_permission(db, cuser.id, permission.id):
+        permission = await system_repo.get_permission_by_fullcode(code)
+        if permission and await admin_repo.check_admin_user_permission(cuser.id, permission.id):
             m[code] = True
         else:
             m[code] = False

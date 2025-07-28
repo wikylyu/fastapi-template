@@ -16,14 +16,14 @@ router.include_router(system.router, prefix="/system", tags=["System"])
 
 
 @router.get("/config", response_model=R[ConfigSchema], summary="获取系统配置", description="获取系统配置")
-async def get_config(db: AsyncSession = Depends(get_db)):
+async def get_config(admin_repo: AdminRepo = Depends(AdminRepo.get)):
     cfg = {
         "appname": APPNAME,
         "copyright": COPYRIGHT,
         "version": APPVERSION,
         "admin_username_pattern": ADMIN_USERNAME_PATTERN,
     }
-    cfg["onboarding"] = not await AdminRepo.check_super_admin_user_exists(
-        db
-    )  # onboarding表示是否存在超级管理员，不存在则可以创建
+    cfg[
+        "onboarding"
+    ] = not await admin_repo.check_super_admin_user_exists()  # onboarding表示是否存在超级管理员，不存在则可以创建
     return R.success(cfg)
