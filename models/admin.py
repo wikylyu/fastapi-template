@@ -84,7 +84,7 @@ class AdminUserToken(BaseTable):
     )
 
     def is_expired(self) -> bool:
-        return self.expired_at and self.expired_at < datetime.now()
+        return self.expired_at and self.expired_at < datetime.now(self.expired_at.tzinfo)
 
 
 class AdminRole(BaseTable):
