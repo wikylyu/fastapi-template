@@ -8,3 +8,4 @@ captcha
 redis
 python-dotenv
 colorama
+aioboto3

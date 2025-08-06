@@ -26,3 +26,10 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 # Admin
 ADMIN_USERNAME_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_-]*$"
+
+
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
+S3_BUCKET = os.getenv("S3_BUCKET", "")
+S3_REGION = os.getenv("S3_REGION", "auto")
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "")
